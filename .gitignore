@@ -38,6 +38,7 @@ bower_components
 
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
+/build
 
 # Dependency directories
 node_modules/
@@ -48,6 +49,7 @@ web_modules/
 
 # TypeScript cache
 *.tsbuildinfo
+next-env.d.ts
 
 # Optional npm cache directory
 .npm
@@ -130,3 +132,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+.direnv
+*.vim
+
+.contentlayer
