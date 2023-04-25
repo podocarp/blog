@@ -19,12 +19,12 @@ export default function Post({ params }: PostProps) {
   const MDXContent = useMDXComponent(post.body.code);
 
   return (
-    <div className="container grid place-content-center">
-      <article className="prose prose-stone">
+    <main className="prose mx-auto">
+      <article className="text-black">
         <h1>{post.title}</h1>
         <MDXContent components={{}} />
       </article>
-    </div>
+    </main>
   );
 }
 

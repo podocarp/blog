@@ -15,6 +15,16 @@ export const Post = defineDocumentType(() => ({
       description: 'The date of the post',
       required: true,
     },
+    summary: {
+      type: 'string',
+      description: 'The summary of the post',
+      required: true,
+    },
+    disabled: {
+      type: 'boolean',
+      description: 'If true, post will be hidden from view.',
+      required: false,
+    },
   },
   computedFields: {
     url: {

@@ -1,20 +1,17 @@
 import Image from 'next/image';
-import { Inter } from 'next/font/google';
 import background from '../public/background.jpg';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export default function Home() {
   return (
-    <main className="flex flex-col max-h-screen min-h-screen items-center justify-between p-24">
-      <div className="w-full max-w-5xl font-mono lg:flex">
-        <h1 className="text-xl">Hello world</h1>
+    <main className="flex flex-col items-center justify-between">
+      <div className="w-full font-mono lg:flex">
+        <h1 className="text-xl pb-4">Hello world</h1>
       </div>
       <Image
         src={background}
         alt="background picture"
         height={300}
-        className="grayscale hover:grayscale-0"
+        className="grayscale hover:grayscale-0 p-0 sm:p-16"
       />
       <a
         href="/posts"
