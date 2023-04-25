@@ -1,15 +1,26 @@
 import { allPosts } from 'contentlayer/generated';
 import { compareDesc } from 'date-fns';
 
-export default async function Posts() {
-  const posts = await getData();
-  const postcards = posts.map(post => {
-    const { title, url } = post;
-    return <>
-      <p>{title}</p>
-      <a>{url}</a>
-    </>;
+type PostCardProps = {
+  title: string,
+  url: string,
+};
+
+function PostCard({ title, url }: PostCardProps) {
+  return <a
+    href={url}
+    key={url}
+  >
+    {title}
+  </a>;
+}
+
+export default function Posts() {
+  const posts = allPosts.sort((a, b) => {
+    return compareDesc(new Date(a.date), new Date(b.date));
   });
+  const postcards = posts.map(post => PostCard({ title: post.title, url: post.url })
+  );
   return (
     <div className="p-24 flex flex-col items-center justify-between">
       <div className="w-full max-w-5xl font-mono lg:flex">
@@ -18,11 +29,4 @@ export default async function Posts() {
       </div>
     </div>
   );
-}
-
-async function getData() {
-  const posts = allPosts.sort((a, b) => {
-    return compareDesc(new Date(a.date), new Date(b.date));
-  });
-  return posts;
 }
