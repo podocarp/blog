@@ -5,7 +5,7 @@ export default function NavBar() {
   >
     {[
       ['Home', '/'],
-      ['Stuff', '/posts'],
+      ['Posts', '/posts'],
       ['Gallery', '/gallery'],
       ['About', '/about'],
     ].map(([title, url]) => (

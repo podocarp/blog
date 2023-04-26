@@ -1,3 +1,5 @@
+import Breadcrumbs from '@/components/breadcrumbs';
+import TimeTag from '@/components/timetag';
 import { allPosts } from 'contentlayer/generated';
 import { useMDXComponent } from 'next-contentlayer/hooks';
 
@@ -19,12 +21,14 @@ export default function Post({ params }: PostProps) {
   const MDXContent = useMDXComponent(post.body.code);
 
   return (
-    <main className="prose mx-auto">
-      <article className="text-black">
-        <h1>{post.title}</h1>
+    <div className="container mx-auto">
+      <Breadcrumbs paths={params.slug} base="posts" />
+      <main className="prose text-black">
+        <h1 className="py-4 m-0">{post.title}</h1>
+        <TimeTag date={post.date} />
         <MDXContent components={{}} />
-      </article>
-    </main>
+      </main>
+    </div>
   );
 }
 

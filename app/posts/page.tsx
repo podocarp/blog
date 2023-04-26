@@ -1,5 +1,5 @@
-import { allPosts } from 'contentlayer/generated';
-import { compareDesc, format, parseISO } from 'date-fns';
+import TimeTag from '@/components/timetag';
+import { GetAllPostsSortedByDate } from '@/lib/posts';
 
 type PostCardProps = {
   title: string,
@@ -10,7 +10,7 @@ type PostCardProps = {
 
 function PostCard({ title, url, summary, date }: PostCardProps) {
   return <div
-    className="grid"
+    className="grid grid-cols-2 pb-4"
     key={url}
   >
     <a
@@ -19,9 +19,7 @@ function PostCard({ title, url, summary, date }: PostCardProps) {
     >
       {title}
     </a>
-    <time dateTime={date} className="justify-self-end text-xs md:text-sm text-slate-500 absolute">
-      {format(parseISO(date), 'LLLL d, yyyy')}
-    </time>
+    <TimeTag date={date} />
     <p className="m-0 text-black text-sm md:text-base">
       {summary}
     </p>
@@ -29,9 +27,7 @@ function PostCard({ title, url, summary, date }: PostCardProps) {
 }
 
 export default function Posts() {
-  const posts = allPosts.sort((a, b) => {
-    return compareDesc(new Date(a.date), new Date(b.date));
-  });
+  const posts = GetAllPostsSortedByDate();
   const postcards = posts.map(post => PostCard({
     title: post.title,
     url: post.url,
