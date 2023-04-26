@@ -31,6 +31,10 @@ export const Post = defineDocumentType(() => ({
       type: 'string',
       resolve: post => `/posts/${post._raw.flattenedPath}`,
     },
+    isIndexFile: {
+      type: 'boolean',
+      resolve: post => post._raw.sourceFileName.includes("index"),
+    },
   },
 }));
 
