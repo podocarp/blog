@@ -1,3 +1,5 @@
+import { FindPostByPath } from "@/lib/posts";
+
 type BreadcrumbProps = {
   /** Array of all paths to create breadcrumbs for.
    */
@@ -19,24 +21,28 @@ export default function Breadcrumbs({ paths, base, currentPath }: BreadcrumbProp
         previousUrl = acc[acc.length - 1].url;
       }
       acc.push({
-        url: `${previousUrl}/${curr}`,
+        url: previousUrl ? `${previousUrl}/${curr}` : curr,
         name: curr,
       });
       return acc;
-    }, [{ url: `/${base}`, name: base }])
-    .map(({ url, name }) => (
-      <>/
-        {url !== currentPath
+    }, [{ url: "", name: base }])
+    .map(({ url, name }) => {
+      const isEnabled =
+        (url !== currentPath && FindPostByPath(url)) ||
+        name === base;
+      return <>/
+        {isEnabled
           ? <a
-            href={url}
+            href={`/${base}/${url}`}
+            key={url}
             className="max-w-fit underline"
           >
             {name}
           </a>
           : <span>{name}</span>
         }
-      </>
-    ));
+      </>;
+    });
 
   return <div
     className="flex flex-row space-x-0 font-mono"
