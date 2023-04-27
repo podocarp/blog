@@ -1,0 +1,362 @@
+\documentclass[8pt]{extarticle}
+\usepackage[a4paper, landscape, margin=0.3cm]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{amssymb, amsmath, amsthm}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=teal}
+\usepackage{graphicx}
+\usepackage{esint}
+\usepackage{physics}
+\usepackage{multicol}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem*{remark}{Remark}
+
+\renewcommand{\footnotesize}{\tiny}
+
+\newcommand{\R}{{\mathbb{R}}}
+\newcommand{\N}{{\mathbb{N}}}
+\newcommand{\Q}{{\mathbb{Q}}}
+\newcommand{\Z}{{\mathbb{Z}}}
+
+\newcommand{\A}{{\mathbf{A}}}
+\newcommand{\B}{{\mathbf{B}}}
+\newcommand{\C}{{\mathbf{C}}}
+\newcommand{\Ft}[1]{ {\mathcal{F}\qty{#1}} }
+\newcommand{\Fti}[1]{ {\mathcal{F}^{-1}\qty{#1}} }
+\newcommand{\Lh}{ {\mathcal{L}} }
+\newcommand{\Lt}[1]{ {\mathcal{L}\qty{#1}} }
+\newcommand{\Lti}[1]{ {\mathcal{L}^{-1}\qty{#1}} }
+
+\author{Jia Xiaodong}
+\title{Math Methods I Cheatsheet}
+
+\begin{document}
+\begin{multicols*}{3}
+\section{Calculus}
+\subsection{General Leibnitz Rule}
+\begin{equation*}
+    \dv[n]{}{x}[f(x)g(x)] = \sum_{r=0}^n f^{(r)}(x)g^{(n-r)}(x)
+\end{equation*}
+\subsection{Leibnitz Rule}
+\begin{align*}
+    \dv{}{x}\int_{u(x)}^{v(x)}f(x,t)\dd{t} &= f(x,v(x))\dv{v(x)}{x} \\
+    &- f(x,u(x))\dv{u(x)}{x} + \int_{u(x)}^{v(x)}
+    \pdv{f(x.t)}{x} \dd{t}
+\end{align*}
+
+\subsection{Jacobian}
+\begin{align*}
+    J &= \pdv{(x,y,z)}{(u,v,w)} =
+    \begin{vmatrix}
+        \partial_{u}x & \partial_{v}x & \partial_{w}x \\
+        \partial_{u}y & \partial_{v}y & \partial_{w}y \\
+        \partial_{u}z & \partial_{v}z & \partial_{w}z \\
+\end{vmatrix} \\
+    \dd{x}\dd{y}\dd{z} \abs{\pdv{(x,y,z)}{(u,v,w)}} &= \dd{u}\dd{v}\dd{w} \\
+    J_{\mathbf{xz}} &= J_{\mathbf{xy}}J_{\mathbf{yz}} \\
+    J_{\mathbf{xx}} &= \mathbf{I}
+\end{align*}
+
+\subsection{Fourier Series}
+Generalized Fourier series over an orthonormal basis in $[a,b]$ with $2L =
+\abs{b-a}$
+\begin{align*}
+    f(x) &= \sum_{n=0}^\infty c_n \phi_n(x) &
+    c_n &= \frac{\braket{\phi_n}{f}}{\norm{\phi_n}^2} &
+\end{align*}
+
+\begin{align*}
+    \phi &= \sin(\frac{n\pi x}{L}) \text{ or } \cos(\frac{n\pi x}{L}) \implies
+    \norm{\phi}^2 = \frac{L}{2} \\
+    \phi &= \exp(i\frac{n\pi x}{L}) \implies \norm{\phi}^2 = 2L
+\end{align*}
+
+Parseval's Theorem
+\begin{equation*}
+    \Big<f(x)^2\Big> = \frac{1}{2L}\int_{-L}^L f(x)^2 \dd{x} =
+    \qty(\frac{a_0}{2})^2 + \frac{1}{2} \sum_{n=1}^\infty (a_n^2 + b_n^2) =
+    \sum_{n=-\infty}^\infty |c_n|^2
+\end{equation*}
+
+For BVP $y^{\prime\prime}(x) + cy = f(x), 0 \leq x \leq L$:
+\begin{align*}
+    y(0)=y(L) &= 0: \quad y(x) = \sum_{n=1}^\infty b_n \sin(\frac{n \pi x}{L})\\
+    y^\prime(0)=y^\prime(L) &= 0: \quad y(x) = \frac{a_0}{2} + \sum_{n=1}^\infty
+    a_n \cos(\frac{n \pi x}{L})
+\end{align*}
+
+\subsection{Fourier Transform}
+$\tilde f(k) = \frac{1}{\sqrt{2\pi}} \int_{-\infty}^\infty e^{-ikx}f(x)\dd{x}$,
+$f(x) = \frac{1}{\sqrt{2\pi}}\int_{-\infty}^\infty e^{ikx}\tilde f(k)\dd{k}$.
+\begin{align*}
+    \mathcal{F}\qty{\dv[n]{f(x)}{x}} &= (ik)^n \mathcal{F}\qty{f(x)} \\
+    \mathcal{F}\qty{\int_{-\infty}^x f(u) \dd{u}} &= \frac{1}{ik}\tilde f(k)
+\end{align*}
+
+\begin{align*}
+    \Ft{f(x)} = \tilde f(k) &\implies \Ft{\tilde f(x)} = f(-k)\\
+    \Ft{f(x+a)} = e^{ika}\tilde f(k) &\iff \Fti{e^{ika}\tilde f(k)} =
+    f(x+a) \\
+    \Fti{\tilde f(x+a)} = e^{-ixa}\tilde f(x) &\iff \Ft{e^{-ixa}f(a)}
+    = \tilde f(k+a)
+\end{align*}
+\begin{align*}
+    \Ft{f(ax)} &= \frac{1}{|a|}\tilde f\qty(\frac{k}{a}) &
+    \Fti{\tilde f(ak)} = \frac{1}{|a|}f\qty(\frac{x}{a})
+\end{align*}
+\begin{equation*}
+    \int_{-\infty}^{\infty} f^*(x)g(x) \dd{x} = \int_{-\infty}^{\infty} \tilde
+    f^*(k)\tilde g(k) \dd{x}
+\end{equation*}
+\begin{align*}
+    \Ft{f(x) * g(x)} &= \sqrt{2\pi}\tilde f(k) \tilde g(k) &
+    \Ft{f(x)g(x)} &= \frac{1}{\sqrt{2\pi}} \tilde f(k) * \tilde g(k)
+\end{align*}
+
+\subsection{Dirac Delta Distribution}
+$\delta(x-x^\prime) = \frac{1}{2\pi} \int_{-\infty}^\infty e^{ik(x-x^\prime)}
+\dd{k}$. It is even. $\delta[a(x-x^\prime)] = \frac{1}{|a|}\delta(x-x^\prime)$.
+$f(x) = \int_{-\infty}^\infty f(x^\prime) \delta(x-x^\prime) \dd{x^\prime}$.
+$\int_{-\infty}^\infty f(x)\delta^{(n)}(x-x^\prime) \dd{x} = (-1)^n f^{(x)}
+(x^\prime)$ 3D Dirac distribution -- remember the Jacobian!
+
+\subsection{Laplace Transform}
+$\Lt{f(t)} = \int_0^\infty e^{-st}f(t) \dd{t}, \Re{s}>0$.
+\begin{gather*}
+    \Lt{\dv[n]{f(t)}{t}} = s^n \overline f(s) - \sum_{r=0}^{n-1} s^{n-1-r}
+        f^{(r)}(0) \\
+    \Lt{\int_0^t f(u) \dd{u}} = \frac{1}{s} \overline f(s) \\
+    \dv[n]{}{s}\Lt{f(t)} = \Lt{(-t)^n f(t)} \\
+    \int_s^\infty \Lt{f(t)} \dd{s^\prime} = \Lt{\frac{f(t)}{t}}
+\end{gather*}
+\begin{gather*}
+    \Lt{f(at)} = \frac{1}{a}\overline f(\frac{s}{a}) \\
+    \Lt{e^{at}f(t)} = \overline f(s-a) \qquad
+    \Lt{H(t-a)f(t-a)} = e^{-sa}\overline f(s)
+\end{gather*}
+\begin{align*}
+    \Lt{f(t) * g(t)} &= \overline f(s) \overline g(s) &
+    \Lti{\overline f(s) \overline g(s)} = f(t) * g(t)
+\end{align*}
+\begin{align*}
+    \Lt{e^{at}} &= \frac{1}{s-a} & \Lt{t^n} &= \frac{n!}{s^{n+1}} \\
+    \Lt{\sin \omega t} &= \frac{\omega}{s^2 + \omega^2} &
+        \Lt{\cos \omega t} &= \frac{s}{s^2 + \omega^2} \\
+    \Lt{\sinh \omega t} &= \frac{\omega}{s^2 - \omega^2} &
+        \Lt{\cosh \omega t} &= \frac{s}{s^2 - \omega^2}
+\end{align*}
+
+\subsection{ODEs}
+$W(x) = \begin{vmatrix}
+    y_1(x) & y_2(x) & \ldots & y_N(x) \\
+    \vdots & \vdots & \ddots & \vdots \\
+    y^{(N-1)}_1(x) & y^{(N-1)}_2(x) & \ldots & y^{(N-1)}_N(x)
+\end{vmatrix}$. $W(x) = 0 \implies $ linearly independence in that region.
+
+\subsubsection{Solution with power series}
+About an ordinary point, $x=x_0=0$ try just using power series. A change of
+variables $X=x-x_0$ can be made to solve around $X=X_0=0$.
+
+For regular singular points we can try Frobenius' method of $y = (x-x_0)^\sigma
+\sum_{n=0}^\infty (x-x_0)^n, a_0 \neq 0$.
+\begin{enumerate}
+    \item Write in the form of $x^2 p_2(x) y^{\prime\prime} + x p_1(x) y^\prime
+        + p_0 y = 0$,
+    \item Write down $\sum_{n=0}^\infty [p_2(x) (n+\sigma) (n+\sigma-1) +
+        p_1(x) (n+\sigma) + p_0(x)] a_n x^n = 0$
+    \item If $x$ is ordinary then $\sigma_2 = 0$ gives the general solution.
+    \item If the $\sigma$ s differ by a non-integer then two linearly
+        independent solutions are obtained.
+    \item Else if they differ by a non-zero integer then the smaller one may or
+        may not be linearly independent. $y_2 = Cy_1(x)\ln|x| + x^{\sigma_2}
+        \sum_{n=0}^\infty, C=0 \implies b_n x^n, b_{\sigma_1 - \sigma_2} = 0$.
+    \item Else (they are equal) then $y_2 = y_1(x)\ln|x| + x^{\sigma_2}
+        \sum_{n=1}^\infty b_n x^n$.
+    \item Generally $y_2 = y_1(x) \int^x \frac{1}{y_1^2 (\xi)} \exp{-\int^\xi
+        \frac{p_1(\xi^\prime)}{p_2(\xi^\prime)} \dd{\xi^\prime}} \dd{\xi}$
+\end{enumerate}
+
+\subsubsection{Particular Integral}
+\begin{equation*}
+    y_p(x) = -\int^x \frac{q(\xi)}{p_2(\xi)} \frac{y_2(\xi)y_1(x) -
+    y_1(\xi)y_2(x)}{y_1(\xi)y_2^\prime(\xi) - y_2(\xi)y_1^\prime(\xi)}
+    \dd{\xi}
+\end{equation*}
+
+\subsection{Sturm-Liouville}
+\subsubsection{Sturm-Liouville Equations}
+$\Lh = \dv{}{x}\qty[p_2(x)\dv{}{x}] + p_0(x)$, for
+$\dv{}{x}\qty[\mu(x)p_2(x) \dv{y(x)}{x}] + \mu(x)p_0(x)y(x) - \lambda
+\mu(x)w(x)y(x) = 0$. More generally:
+
+If $p_1 = \dv{p_2(x)}{x}$, $\mu = 1$, otherwise use
+\begin{equation*}
+    \mu(x) = \exp{\int^x \frac{p_1(\xi) - p_2^\prime(\xi)}{p_2(\xi)} \dd{\xi}}
+\end{equation*}
+
+\begin{gather*}
+    y(x) = \int_a^b G(x, x^\prime) q(x^\prime) \dd{x^\prime}
+\end{gather*}
+
+\subsubsection{Eigenfunctions}
+\begin{enumerate}
+    \item Write down $\Lh \phi(x) = \lambda \mu(x) \phi(x)$. Solve and obtain
+        a spectrum.
+    \item Normalize all $\phi$.
+    \item $G(x,x^\prime) = \sum_{n=0}^\infty \frac{1}{\lambda_n}
+    \hat{\phi}^*_n(x^\prime) \hat{\phi}_n(x) = G^*(x^\prime, x)$
+\end{enumerate}
+
+\subsection{Green's Function}
+
+\subsubsection{Dirac delta method (impulse)}
+\begin{enumerate}
+    \item Solve homo equation $\Lh y_{1,2}(x) = 0$.
+    \item Do
+        \begin{equation*}
+            G(x,x^\prime) = \begin{cases}
+                \alpha_1(x^\prime)y_1(x) + \alpha_2(x^\prime)y_2(x), a \leq x
+                \leq x^\prime \\
+                \beta_1(x^\prime)y_1(x) + \beta_2(x^\prime)y_2(x), x^\prime \leq
+                x \leq b
+            \end{cases}
+        \end{equation*}
+    \item Impose boundary conditions:
+        \begin{gather*}
+            \begin{cases}
+                y(a) = 0 \implies G(a,x^\prime) = 0 \\
+                y(b) = 0 \implies G(b,x^\prime) = 0
+            \end{cases}
+            \begin{cases}
+                y^\prime(a) = 0 \implies G^\prime(a,x^\prime) = 0 \\
+                y^\prime(b) = 0 \implies G^\prime(b,x^\prime) = 0
+            \end{cases} \\
+            \begin{cases}
+                y(a) = 0 \implies G(a,x^\prime) = 0 \\
+                y^\prime(b) = 0 \implies G^\prime(b,x^\prime) = 0
+            \end{cases}
+            \begin{cases}
+                y^\prime(a) = 0 \implies G^\prime(a,x^\prime) = 0 \\
+                y(b) = 0 \implies G(b,x^\prime) = 0
+            \end{cases} \\
+        \end{gather*}
+    \item Impose continuity/discontinuity conditions at $x=x^\prime$:
+         \begin{equation*}
+            \begin{cases}
+                \lim\limits_{\epsilon\to0^+} \qty[ G(x,x^\prime) \eval_{x=x^\prime +
+                \epsilon} - G(x,x^\prime) \eval_{x=x^\prime - \epsilon}] = 0 \\
+                \lim\limits_{\epsilon\to0^+} \qty[ G^\prime(x,x^\prime)
+                \eval_{x=x^\prime + \epsilon} - G^\prime(x,x^\prime)
+                \eval_{x=x^\prime - \epsilon}] = -\frac{1}{p_2(x^\prime)}
+            \end{cases}
+        \end{equation*}
+\end{enumerate}
+\section{Vector calculus}
+\subsection{Identities}
+\begin{align*}
+    \A\cdot(\B\times\C) &= \B\cdot(\C\times\A) = \C\cdot(\A\times\B) \\
+    \A\times(\B\times\C) &= \B(\A\cdot\C) - \C(\A\cdot\B)
+\end{align*}
+\begin{align*}
+    \grad &= \Phi(\grad\Psi) + (\grad\Phi)\Psi\\
+    \grad(\A \cdot \B) &= \A \times (\curl \B) + \B \times (\curl \A) + (\A \cdot
+    \grad)\B + (\B \cdot \grad)\A \\
+    \div (\Phi \A) &= \Phi(\div \A) + \A \cdot \grad \Phi\\
+    \div (\A \times \B) &= \B \cdot (\curl \A) -
+        \A \cdot (\curl \B) \\
+    \curl (\Phi\A) &= \Phi(\curl \A) + \grad\Phi \times \A \\
+    \curl (\A \times \B) &= \A(\div \B) - \B(\div \A) +
+    (\B\cdot\grad)\A - (\A\cdot\grad)\B \\
+    \curl (\curl \A) &= \grad(\div \A) - \laplacian \A
+\end{align*}
+\begin{align*}
+    \int_{C}\nabla\Phi\cdot\dd{r} &= \Phi(P_2) - \Phi(P_1) \\
+    \iiint_{V} \nabla\cdot\A \dd{V} &= \oiint_{S} \A\cdot\dd{\vec{a}} \\
+    \oiint_{S} (\nabla\times\A)\cdot \dd{\vec{a}}&= \oint_{C}
+    \A\times\dd{\vec{r}}
+\end{align*}
+
+\subsection{Vector Integration}
+
+\begin{align*}
+    \dd{s} &=\sqrt{\dv{\vec{r}}{u} \cdot \dv{\vec{r}}{u}}\dd{u} &
+    \dd{\vb{a}} &= \pm \pdv{\vb{r}}{u} \cross \pdv{\vb{r}}{v} \dd{u}\dd{v} &
+    \dd{\vb{a}} &= \frac{\grad F\dd{x}\dd{y}}{\partial F/ \partial z} \eval_S &
+\end{align*}
+
+\subsection{Curvilinear Coordinates}
+$h_i = \abs{\pdv{\vectorbold{r}}{q_i}}$
+\begin{align*}
+    \nabla A &= \sum_i^3 \frac{1}{h_i}\pdv{\Phi}{u_i}\hat{e}_i^\prime \\
+    \nabla \cdot \A &= \frac{1}{h_1 h_2 h_3}\Big[\pdv{u_1}(h_2 h_3 \A_1)
+    + \pdv{u_2}(h_3 h_1 \A_2) + \pdv{u_3}(h_2 h_1 \A_3)\Big] \\
+    \nabla^2\Phi &= \frac{1}{h_1 h_2 h_3} \Big[
+        \pdv{u_1}(\frac{h_2 h_3}{h_1} \pdv{\Phi}{u_1})
+        + \pdv{u_2}(\frac{h_3 h_1}{h_2} \pdv{\Phi}{u_2}) \\
+        &\quad + \pdv{u_3}(\frac{h_1 h_2}{h_3} \pdv{\Phi}{u_3}) \Big] \\
+    \nabla \cross \A &= \frac{1}{h_1 h_2 h_3}
+    \begin{vmatrix}
+        h_1 \hat{e}_1^\prime & h_2 \hat{e}_2^\prime & h_3 \hat{e}_3^\prime \\
+        \partial_{u_1} & \partial_{u_2} & \partial_{u_3} \\
+        h_1\A_1 & h_2\A_2 & h_3\A_3
+    \end{vmatrix}
+\end{align*}
+
+\section{Misc}
+\subsection{Binomial Expansion}
+\begin{equation*}
+    (1+x)^N = \sum_{n=0}^N \binom{N}{n}x^n \quad \binom{N}{n} =
+    \frac{\prod_{i=0}^{\text{n times}}(N-i)}{n!} ,\quad \abs{x}<1
+\end{equation*}
+
+\subsection{MF15}
+\begin{align*}
+    \sin^2\theta &= \frac{1-\cos2\theta}{2} & \cos^2\theta &=
+    \frac{1+\cos2\theta}{2} \\
+    \sin^3\theta &= \frac{3\sin\theta - \sin3\theta}{4} & \cos^3\theta &=
+    \frac{3\cos\theta+\cos3\theta}{4} \\
+    \sin^3\theta &= \frac{3-4\cos2\theta+\cos4\theta}{8} & \cos^3\theta &=
+    \frac{4\cos2\theta+\cos4\theta}{8}
+\end{align*}
+\begin{align*}
+    2\cos\theta\cos\phi &= \cos(\theta-\phi)+\cos(\theta+\phi)\\
+    2\sin\theta\sin\phi &= \cos(\theta-\phi)-\cos(\theta+\phi)\\
+    2\sin\theta\cos\phi &= \sin(\theta+\phi)+\sin(\theta-\phi)\\
+    2\cos\theta\sin\phi &= \sin(\theta+\phi)-\sin(\theta-\phi)
+\end{align*}
+\begin{align*}
+    \sinh z &= \frac{e^z-e^{-z}}{2} & \sin z &= \frac{e^{iz}-e^{-iz}}{2i} \\
+    \cosh z &= \frac{e^z+e^{-z}}{2} & \cos z &= \frac{e^{iz}+e^{-iz}}{2} \\
+    \sin iz &= i\sinh z & \cos iz &= \cosh z \\
+    i\sin z &= \sinh iz & \cos z &= \cosh iz
+\end{align*}
+\begin{align*}
+    \dv{}{x} \arcsin x &= \frac{1}{\sqrt{1-x^2}}
+                       & \dv{}{x} \arccsc x &= -\frac{1}{|x|\sqrt{x^2-1}} \\
+    \dv{}{x} \arccos x &= -\frac{1}{\sqrt{1-x^2}}
+                       & \dv{}{x} \arcsec x &= \frac{1}{|x|\sqrt{x^2-1}} \\
+    \dv{}{x} \arctan x &= -\frac{1}{1+x^2}
+                       & \dv{}{x} \arccot x &= -\frac{1}{1-x^2}
+\end{align*}
+
+
+\subsubsection{Gram-Schmidt Orthogonalization}
+\begin{gather*}
+    \ket{\phi_n} = \ket{\psi_n} - \sum_{i=0}^{n-1} \braket{\hat{\phi}_i}{\psi_n}
+    \ket{\hat{\phi}_i} \\
+    \ket{\hat{\phi}_n} =
+    \frac{\ket{\phi_n}}{\braket{\phi_n}{\phi_n}^{\frac{1}{2}}}, \qquad
+    \braket{\hat{\phi}_i}{\hat{\phi}_j} = \delta_{ij}
+\end{gather*}
+
+\subsubsection{Hermitian Operators}
+Can be found with repeated integration by parts:
+\begin{align*}
+    \int_a^b f^*(s)[\Lh g(s)] \dd{s} = \int_a^b [\Lh f(s)]^* g(s) \dd{s} +
+    \underbrace{\text{boundary terms}}_{\text{reduces to 0}}
+\end{align*}
+
+\end{multicols*}
+\end{document}

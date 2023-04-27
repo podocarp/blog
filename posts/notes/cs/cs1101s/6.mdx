@@ -1,0 +1,70 @@
+---
+date: "2020-08-17"
+title: "CS1101S S6"
+summary: ""
+hidden: true
+---
+
+Extra questions:
+
+1. Implement a `set` data structure using lists. A `set` is an unordered
+   collection of unique items. You will need to implement the following
+   functions:
+
+   - `set(xs)` returns a new set containing elements in list `xs`.
+   - `add(s, x)` add item `x` to set `s` and return the new set.
+   - `is_elem(x, x)` checks if `x` is in `s`.
+   - `union(s1, s2)` return a new set that contains all the elements in `s1`
+     and `s2`.
+   - `intersect(s1, s2)` return a new set that contains elements in both `s1`
+     and `s2`.
+
+   It does not matter how you back up your data structure, but try to pick the
+   most reasonable!
+
+2. The function `accumulate_n` is similar to `accumulate` except that it takes
+   as its third argument a list of lists, which are all assumed to have the same
+   number of elements. It applies the designated accumulation function to
+   combine all the first elements of the sequences, all the second elements of
+   the sequences, and so on, and returns a list of the results. For example:
+
+   ```js
+   const s = list(
+     list(1, 2, 3),
+     list(4, 5, 6),
+     list(7, 8, 9),
+     list(10, 11, 12)
+   );
+   // returns list(22, 26, 30).
+   accumulate_n((x, y) => x + y, 0, s);
+   ```
+
+   If you want a hint, here is a skeleton:
+
+   ```js
+    function accumulate_n(op, init, seqs) {
+        return is_null(head(seqs))
+            ? null
+            : pair( ..., ...);
+    }
+   ```
+
+3. [Insertion sort](https://en.wikipedia.org/wiki/Insertion_sort) is a sorting
+   method that revolves around the `insert` function. What insertion sort does
+   is to basically take one element, and insert it at the correct place in a
+   list.
+
+   ```text
+    insert(4, xs) ────┐
+                      v
+            xs = 1  3  5  9
+   ```
+
+   - Implement `insert`. You can use whatever ordering you like.
+   - Implement `insertionsort` using your `insert` function.
+   - Give the space and time complexity for your implementation.
+
+## Slides
+
+<EmbedPdf src="/files/cs1101s/6.pdf"/>
+<EmbedPdf src="/files/cs1101s/6_handout.pdf"/>

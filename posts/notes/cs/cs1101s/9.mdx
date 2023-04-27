@@ -1,0 +1,299 @@
+---
+date: "2020-10-17"
+title: "Searching, sorting, memoization."
+summary: "More on searching and sorting, and memoization."
+hidden: true
+---
+
+## Extra questions
+
+1. The [Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) is
+   a zero-player game and is a kind of cellular automaton. It has an infinite 2D
+   grid of _cells_.. Each cell has two states --- alive or dead. They evolve
+   (change states) based on a fixed set of rules every generation (time step).
+   Here are the rules:
+
+   - Any live cell with fewer than two live neighbours die (under-population).
+   - Any live cell with two or three live neighbours remain alive.
+   - Any live cell with more than three live neighbours die (over-population).
+   - Any dead cell with three live neighbours become a live cell (reproduction).
+
+   The grid of cells can be represented as a 2D array of numbers. A value of `0`
+   represents a dead cell and `1` represents a live cell.
+
+   - First, write a function `init_board(rows, cols)` that takes in two natural
+     numbers `rows` and `cols`, and generates a 2D array with `rows` number of
+     rows and `cols` number of columns. All cells are initially dead.
+
+   - Next, perhaps the universe is actually finite in size. Perhaps spacetime
+     closes in on itself. Think of arcade games: going off the screen brings you
+     to the other side. Write a function `live_neighbours(grid, n, r, c)`
+     that takes in as parameters a 2D `n` by `n` array `grid`, natural numbers
+     `n`, `r`, `c`, and returns the number of live neighbours the cell
+     `grid[r][c]` has. Be sure to keep in mind the geometry of our spacetime. You
+     may assume `n >= 3`.
+
+   - Finally, you should create a function `next(grid, n)` that takes in a 2D `n`
+     by `n` array `grid`, and returns the array but updated with the next
+     generation state of all cells. Again, `n >= 3`. What is the order of growth
+     of your function `next`?
+
+2. There are flies on a wall. A lizard wants to eat flies. It starts at the top
+   of the wall, moves one tile down (the wall is made of tiles), eats the fly on
+   the tile (if any), moves one tile down, and so on, until it reaches the
+   floor. It can move in this manner:
+
+   ```text
+    +----+----+----+
+    |    |    |    |
+    |    | L  |    |
+    +--------------+
+    |    |    |    |
+    | L' | L' | L' |
+    +----+----+----+
+   ```
+
+   where the lizard moves from an initial position `L` to a one of the new
+   positions `L'`.
+
+   Write a function `max_flies(tiles)` where `tiles` is a 2D array where
+   `tile_flies[r][c]` represents the number of flies on the tile located at row
+   `r` and column `c` on the wall. The function returns the maximum possible
+   number of flies the lizard can eat in one single trip from the top of the
+   wall to the bottom of the wall moving with the rules detailed above.
+
+   ```js
+   const tiles = [
+     [3, 1, 7, 4, 2],
+     [2, 1, 3, 1, 1],
+     [1, 2, 2, 1, 8],
+     [2, 2, 1, 5, 3],
+     [2, 1, 4, 4, 4],
+     [5, 7, 2, 5, 1],
+   ];
+   max_flies(tiles); // result: 32
+   ```
+
+   Try using memoization in your answer. How fast is a memoized vs a
+   non-memoized version of your answer?
+
+   **Extra challenge**: Can you modify your function to print out the path
+   the lizard would have taken?
+
+3. A severe flood has broken out at a river. You are tasked with mapping out
+   flooded regions and non flooded regions. Given the topology of the land
+   predicted height of flood water, we can predict which regions will be
+   flooded.
+
+   - The flood is known to have started at a specific position on the map.
+   - Water only flows north, south, east, west one tile at a time.
+   - Water will only flood into lands that are lower than the water level.
+   - Water cannot "jump" across land barriers, i.e. the flood can create a lake,
+     but it will not overflow as long as its borders are high enough.
+
+   Write a function `floodfill(map, h, s_x, s_y)` that takes in a `map`
+   representing the map, height of the flood water `h`, and starting coordinates
+   of the flood, `s_x` and `s_y`. The map is a 2D array where `map[x][y]`
+   represents the height of the land at coordinates `(x, y)`. Your function
+   should return an updated array with flooded regions marked with symbol `~`
+   and the rest untouched. Example:
+
+   ```js
+   const m = [
+     [3, 1, 7, 4, 2],
+     [2, 5, 3, 1, 2],
+     [1, 3, 2, 1, 8],
+     [3, 2, 1, 5, 3],
+     [2, 1, 4, 4, 4],
+     [5, 7, 4, 5, 1],
+   ];
+   floodfill(m, 3, 2, 3);
+   /* m afterwards:
+   [[3, 1, 7, 4, "~"],
+    [2, 5, 3, "~", "~"],
+    [1, 3, "~", "~", 8],
+    [3, "~", "~", 5, 3],
+    ["~", "~", 4, 4, 4],
+    [5, 7, 4, 5, 1]] */
+   ```
+
+4. We can represent a matrix as a 2D array of numbers. For example:
+
+   ```text
+   ( 1  2 )
+   ( 3  4 )
+
+   [[1, 2], [3, 4]]
+   ```
+
+   Write a function `mrotate_cw(M)` that takes in a matrix `M` and rotates
+   it 90 degrees clockwise. For example:
+
+   ```text
+   [[ 1, 2,  3,  4],
+    [ 5, 6,  7,  8],
+    [ 9, 10, 11, 12],
+    [13, 14, 15, 16]]
+   Becomes
+   [[13, 9,  5, 1],
+    [14, 10, 6, 2],
+    [15, 11, 7, 3],
+    [16, 12, 8, 4]]
+   ```
+
+   The challenge is that the rotation must be performed in-place. This means
+   that you cannot create any additional data structures.
+
+   Hint 1: <span class="spoiler">Use swaps</span><br/>
+   Hint 2: <span class="spoiler">Use transpose</span><br/>
+   Hint 3: <span class="spoiler">Use reverse</span>
+
+## Slides
+
+<EmbedPdf src="/files/cs1101s/10.pdf"/>
+<EmbedPdf src="/files/cs1101s/10_handout.pdf"/>
+
+## Answers
+
+1. This is just for fun and is quite easy so no answers provided.
+2. First we have to note that this cannot be solved by simply taking the best
+   choice at every turn. Using the example from just now:
+
+   ```text
+   [[3,1,7,4,2],
+    [2,1,3,1,1],
+    [1,2,2,1,8],
+    [2,2,1,5,3],
+    [2,1,4,4,4],
+    [5,7,2,5,1]];
+
+    Greedy path 1: 7+3+2+2+2+5 = 21
+    Greedy path 2: 7+3+2+5+4+5 = 26
+   ```
+
+   So we need to actually consider all possibilities. Let us use some wishful
+   thinking here. If the wall is just 1 tile tall, that would be easily solved
+   --- we just take the maximum. What if the wall is 2 tiles tall? We would, at
+   every starting tile, ask the 3 tiles we can move to: "who is the max?". After
+   that, we would ask all the starting tiles: "who is the max?". Then that tile
+   is the winner.
+
+   To put it more formally, at every tile, we would record this down:
+
+   ```js
+   tiles[x][y] +
+     max(max_flies(x - 1, y + 1), max_flies(x, y + 1), max_flies(x + 1, y + 1));
+   ```
+
+   which is the maximum number of flies we can possibly eat if we pretend to
+   have started from this tile. Then to know what is the actual answer we just
+   call `max` on `max_flies(0, 0)` to `max_flies(cols - 1, 0)`. Which are the
+   actual starting tiles.
+
+   So here is the entire implementation together with helper functions and all.
+
+   ```js
+   function max_flies(tiles) {
+     const rows = array_length(tiles);
+     const cols = array_length(tiles[0]); //assume its not jagged
+
+     /* returns true if coords are in bounds */
+     function bound_check(x, y) {
+       return !(x < 0 || x > cols - 1 || y < 0 || y > rows - 1);
+     }
+
+     /* gets the number of flies at (c, r) */
+     function get_flies(c, r) {
+       return bound_check(c, r) ? tiles[r][c] : undefined;
+     }
+
+     const memo = [];
+     memo[rows - 1] = tiles[rows - 1];
+
+     function read(x, y) {
+       return bound_check(x, y)
+         ? memo[y] === undefined
+           ? undefined
+           : memo[y][x]
+         : undefined;
+     }
+     function write(x, y, v) {
+       if (!bound_check(x, y)) {
+         return undefined;
+       } else if (memo[x] === undefined) {
+         memo[y] = [];
+       } else {
+       }
+       memo[y][x] = v;
+     }
+
+     function max_flies_start(x, y) {
+       const readout = read(x, y);
+       if (readout !== undefined) {
+         return readout;
+       } else if (!bound_check(x, y)) {
+         return 0;
+       } else {
+         const res =
+           get_flies(x, y) +
+           max(
+             list(
+               max_flies_start(x - 1, y + 1),
+               max_flies_start(x, y + 1),
+               max_flies_start(x + 1, y + 1)
+             )
+           );
+         write(x, y, res);
+         return res;
+       }
+     }
+
+     return max(map((x) => max_flies_start(x, 0), enum_list(0, cols - 1)));
+   }
+
+   function max(xs) {
+     return accumulate((x, acc) => (x > acc ? x : acc), 0, xs);
+   }
+   ```
+
+   How would you return the optimal path that the algorithm has found? This is
+   actually more tedious than it is hard. What you can do is to modify
+   `max_flies_start` to return a pair of `(res, path)` where `res` stays the
+   same, but `path` is now a list of optimal visited tiles. Of course `max`
+   would have to be modified as well.
+
+   Congratulations, you have just written [depth first search](https://en.wikipedia.org/wiki/Depth-first_search).
+
+3. This is a fairly easy recursion problem.
+
+   ```js
+   function floodfill(m, h, s_x, s_y) {
+     const rows = array_length(m);
+     const cols = array_length(m[0]);
+
+     function bound_check(x, y) {
+       return !(x < 0 || x > cols - 1 || y < 0 || y > rows - 1);
+     }
+
+     function neighbours(x, y) {
+       const candidates = list(
+         pair(x - 1, y),
+         pair(x + 1, y),
+         pair(x, y - 1),
+         pair(x, y + 1)
+       );
+       return filter((x) => bound_check(head(x), tail(x)), candidates);
+     }
+     if (m[s_y][s_x] === "~") {
+       return undefined;
+     } else if (m[s_y][s_x] < h) {
+       m[s_y][s_x] = "~";
+       map((x) => floodfill(m, h, head(x), tail(x)), neighbours(s_x, s_y));
+     } else {
+     }
+   }
+   ```
+
+   Congratulations, you have just written a modified [flood fill](https://en.wikipedia.org/wiki/Flood_fill).
+
+4. Transpose the matrix then reverse each row. Exercise left for the reader.

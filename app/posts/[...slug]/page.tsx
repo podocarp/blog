@@ -1,4 +1,5 @@
 import Breadcrumbs from '@/components/breadcrumbs';
+import mdxComponents from '@/components/mdx';
 import { PostCards } from '@/components/postcards';
 import TimeTag from '@/components/timetag';
 import { FindPostByPath, FindPostsInCategory } from '@/lib/posts';
@@ -44,7 +45,7 @@ export function Post({ slug, post }: PostProps) {
       <main className="prose text-black">
         <h1 className="py-4 m-0">{post.title}</h1>
         <TimeTag date={post.date} />
-        <MDXContent components={{}} />
+        <MDXContent components={mdxComponents} />
       </main>
     </>
   );
@@ -53,13 +54,12 @@ export function Post({ slug, post }: PostProps) {
 function Category({ slug, post }: PostProps) {
   const MDXContent = useMDXComponent(post.body.code);
 
-
   return (
     <>
       <Breadcrumbs paths={slug} base="posts" currentPath={post.url} />
       <main className="prose text-black">
         <h1 className="py-4 m-0">Category: {post.title}</h1>
-        <MDXContent components={{}} />
+        <MDXContent components={mdxComponents} />
         <hr />
         <p> All posts under this category: </p>
         <PostCards posts={FindPostsInCategory(slug)} />

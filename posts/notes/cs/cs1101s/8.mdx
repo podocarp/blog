@@ -1,0 +1,46 @@
+---
+date: "2020-10-11"
+title: "Mutability and environment model."
+summary: "Mutability, loops, environment model."
+hidden: true
+---
+
+## Extra questions
+
+1. Write the function `d_reverse` that takes as argument a list `xs`, and
+   returns a list that is the reverse of the input list. Your function must not
+   create any new pair, and the result list must only be made of existing pairs
+   in `xs`. Your function must not modify the head of any of the existing pairs.
+
+   ```js
+   const L = list(1, 2, 3, 4, 5, 6);
+   d_reverse(L); // returns [6, [5, [4, [3, [2, [1, null]]]]]]
+   L; // What is L now?
+   ```
+
+2. [SICP Ex 3.16 and 3.17] Ben Bitdiddle decides to write a function to count
+   the number of pairs in any list structure. “It’s easy,” he reasons. “The
+   number of pairs in any structure is the number in the head plus the number in
+   the tail plus one more to count the current pair.” So Ben writes the
+   following function:
+   ```js
+   function count_pairs(x) {
+     if (!is_pair(x)) {
+       return 0;
+     } else {
+       return 1 + count_pairs(head(x)) + count_pairs(tail(x));
+     }
+   }
+   ```
+   Show that this function is not correct. In particular, draw box-and-pointer
+   diagrams representing list structures made up of exactly three pairs for
+   which Ben’s procedure would return 3, return 4, return 7, or never return at
+   all. Devise a correct version of count_pairs that returns the number of
+   distinct pairs in any structure. (Hint: Traverse the structure, maintaining
+   an auxiliary data structure that is used to keep track of which pairs have
+   already been counted.)
+
+## Slides
+
+<EmbedPdf src="/files/cs1101s/9.pdf"/>
+<EmbedPdf src="/files/cs1101s/9_handout.pdf"/>

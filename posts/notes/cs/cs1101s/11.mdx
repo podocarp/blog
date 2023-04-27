@@ -1,0 +1,56 @@
+---
+date: "2020-10-24"
+title: "Meta-linguistic abstraction"
+summary: "The meta circular evaluator, and mastery check 2"
+hidden: true
+---
+
+## Mastery check
+
+Write up your answers in the comment sections below. Feel free to discuss and
+cross reference.
+
+### Environment model
+
+Environment model: Students need to be able to describe the structures and
+references that evolve when programs are evaluated using the environment model.
+The core of the model is function definition (function declaration and lambda
+expressions) and function application. Students need to realize that the
+environment model is determined by the scoping rules of the language. Avengers
+can ask:
+
+1. What is the purpose of the environment model?
+
+2. Why do function objects need to keep track of an environment? Why can't they
+   point to whatever environment they are being called from?
+
+### Memoization
+
+3. What is memoization? How would you go about memoizing something?
+
+4. Can every function be memoized?
+
+5. Is it possible to write a higher-order memoize function that takes a function
+   as argument and returns a memoized version? If yes, show how. If no, give a
+   counterexample.
+
+### Streams
+
+7. How are streams, an potentially infinite construct, even possible?
+
+8. [SICP Ex 3.58] Give an interpretation of the stream computed by the function
+   ```js
+   function expand(num, den, radix) {
+     return pair(
+       quotient(num * radix, den),
+       expand((num * radix) % den, den, radix)
+     );
+   }
+   ```
+   where `quotient` computes integer division, in which the fractional part
+   (remainder) is discarded.
+
+## Slides
+
+<EmbedPdf src="/files/cs1101s/12.pdf"/>
+<EmbedPdf src="/files/cs1101s/12_handout.pdf"/>

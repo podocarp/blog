@@ -12,23 +12,23 @@ cookbook than textbook.
 The entries in bold are more interesting things, the rest are just friends we
 make along the journey.
 
-0. [Pre-installation](./pre-installation/) --- gpg and ssh setup
+0. [Pre-installation](./nix/pre-installation/) --- gpg and ssh setup
 1. [**ZFS & Installation**](./installation/) --- ZFS setup with removable key encryption and installation of NixOS
 2. Services
-   - [Samba and NFS](./samba/) --- For our network drives
-   - [Misc configs](./misc-configs/) --- Power saving, Nix.
-   - [Networking](./networking/) --- Mainly about setting up dual NICs
-   - [Secrets with password store](./password-store/) --- Handling secrets in Nix with password store (DEPRECATED).
-   - [**Secrets with nix-sops**](./nix-sops/) --- Handling secrets with nix-sops.
+   - [Samba and NFS](./nix/samba/) --- For our network drives
+   - [Misc configs](./nix/misc-configs/) --- Power saving, Nix.
+   - [Networking](./nix/networking/) --- Mainly about setting up dual NICs
+   - [Secrets with password store](./nix/password-store/) --- Handling secrets in Nix with password store (DEPRECATED).
+   - [**Secrets with nix-sops**](./nix/nix-sops/) --- Handling secrets with nix-sops.
 3. Services
-   - [Introduction](./apache/): Apache reverse proxy and containers with tinode as an example
-   - [Prosody](./prosody/): Prosody (a XMPP communication server) in Nix container.
-   - [**Nginx Reverse proxy**](./nginx-reverse-proxy/): How to easily access your services with a reverse proxy.
-   - [Git](./gitea/): Git and Gitea
-   - [Mediawiki](./mediawiki/): Mediawiki, actually just a demo for nix-sops
+   - [Introduction](./nix/apache/): Apache reverse proxy and containers with tinode as an example
+   - [Prosody](./nix/prosody/): Prosody (a XMPP communication server) in Nix container.
+   - [**Nginx Reverse proxy**](./nix/nginx-reverse-proxy/): How to easily access your services with a reverse proxy.
+   - [Git](./nix/gitea/): Git and Gitea
+   - [Mediawiki](./nix/mediawiki/): Mediawiki, actually just a demo for nix-sops
 4. Operations
 
-   - [**Nixops**](./nixops/): Deployment with NixOps.
+   - [**Nixops**](./nix/nixops/): Deployment with NixOps.
    - [Hydra]: WIP: Hydra for CI.
 
 5. Misc

@@ -1,0 +1,422 @@
+---
+date: "2020-09-20"
+title: "Extra questions and mastery check"
+summary: "Some extra practice questions for the midterms."
+hidden: true
+---
+
+## Mastery check (2021)
+
+These are the updated questions for this semester. Past year questions and
+answers are left below for reference.
+
+### Scope
+
+1. Are function parameters considered to be name declarations? Otherwise, what
+   are they?
+2. Determine the output of the following program and describe how you arrived at
+   the answer:
+
+   ```js
+   function g(g) {
+     return (g) => g(g);
+   }
+
+   g((f) => f(f))((g) => (f) => f(g))(display);
+   ```
+
+### Higher order functions
+
+3. Discuss what you understand by ``higher order functions'' and why it is an
+   useful thing to have.
+4. Recall we mentioned in class that `accumulate` is also known as fold right
+   since the function application starts from the right side of the list.
+   Implement fold left.
+   ```js
+   f(0 ... f(n-1, f(n, init)))            // fold right
+   f(f(f(init, 0), 1), 2 ...)             // fold left
+   ```
+   As a bonus, try and see if you can implement fold right using fold left.
+   Hint: <span class="spoiler">Look at some of the questions below.</span><br/>
+
+### Substitution model
+
+5. If you are given a recursive process, can you always transform it into an
+   iterative process? If yes, how? If no, why not?
+   Hint: <span class="spoiler">Think about storing answers as
+   parameters.</span><br/>
+
+## Mastery check (2020)
+
+Write up your answers briefly in the comment sections below. Feel free to
+discuss and cross reference.
+
+### Scope
+
+1. What is the difference between a name declaration and name occurrence?
+2. What are the 4 kinds of name declarations in Source?
+3. Are function parameters declarations?
+4. Consider the following. Does it work? If it does, explain what it does. If it
+   doesn't then explain why.
+   ```js
+   function twice(g) {
+     return (y) => g(g(x));
+   }
+   f((y) => x * x);
+   ```
+
+### Higher order functions
+
+5. Give the signature for function `concatMap`.
+   `js
+    function concatMap(f) {
+        return xs => accumulate((a, b) => append(f(a), b), null, xs);
+    }
+    `
+   If you need a hint, try the second question first.
+
+6. Consider the following. What does it do? Please try this first instead of
+   simply running it. It will do you good.
+   ```js
+   (n) =>
+     concatMap((x) => map((y) => list(x, y, x * y), enum_list(1, x)))(
+       enum_list(1, n)
+     );
+   ```
+
+### Substitution model
+
+7. Try the above for `n = 2`. Again, try to do this without relying on the
+   interpreter. You can skip a few steps if it is obvious what is going to
+   happen.
+
+## Extra questions
+
+Some questions are more difficult than others. In general these are for you to
+practice, have fun, and learn new things. It may not be entirely reflective of
+the difficulty or content of the midterms.
+
+### 1. Optimus Prime
+
+A prime is a number that has exactly 2 distinct factors. Examples are 2, 3, 5,
+7, 11. This question will guide you through generating a list of primes.
+
+- Write a function `sieve(xs)` using `filter` that takes in list `xs`, and
+  returns another list but without their multiples.
+- Write a function `primes(a, b)` that will generate all primes between
+  integers `a` and `b`, where `a < b`.
+- How many primes are there between 1101 and 2020?
+- What is the time complexity of your implementation of `primes`? Give it in
+  terms of `a` and `b`.
+
+### 2. Queue up
+
+A queue is a data structure. Just like a real queue, the first person to go in
+is also the first one to come out. This is known as first in first out (FIFO).
+
+A queue structure has 3 defining features:
+
+- $O(1)$ `enqueue(x)` --- queues `x` up and returns the new queue.
+- $O(1)$ `dequeue` --- removes the next in line from the queue and returns a
+  pair of the new queue and the item removed.
+
+This is all fairly easy to do if you have another data structure called a doubly
+linked list. In Source, `list` is what is known as a _singly_ linked list. If
+you draw a box and pointer diagram, you can follow the arrows in only one
+direction. This means appending takes $O(n)$ time while prepending takes
+$O(1)$ time. Well we do not have this feature in Source. Try and figure out a
+way to do this anyway?
+
+Hint: You can do this with 2 lists. Try making a $O(n)$ `dequeue` first. Then
+try to make it $O(1)$ "on average". This means for example if we `dequeue` $n$
+items, then it still takes $O(n)$ operations. This is entirely possible if only
+the first few operations are costly and the rest are cheap. To give you an
+illustration, consider doubling the length of a list of length $n$ by adding
+some junk to the end. This is actually $O(1)$ on average, despite the append
+operation taking $O(n)$ time, because only one append is required.
+
+More hints: If you still have some trouble, consider <span
+style="background:black; color:black;"> having a list facing the front and
+another facing the back. </span>
+
+Even more hints: yes, this question might be quite difficult at this level.
+Don't worry. Have you considered using <span style="background:black; color:
+black;">reverse</span> somewhere?
+
+### 3. Select-k
+
+Given an **unsorted** list of numbers. Find the $k$-th largest element as fast
+as you can.
+
+Hint: Take some inspiration from <span style="background:black;
+color:black;">quicksort</span>.
+
+### 4. Palindromes
+
+A palindrome is a string where it is the same regardless of if you read it left
+to right or right to left. For example (ignore spaces, capitalization, and
+punctuation):
+
+```text
+A man, a plan, a canal: Panama
+```
+
+This is a famous palindrome referring to the Panama Canal.
+
+Write a function `isPalindrome(xs)` that takes in a string represented as a list
+of characters `xs` (guaranteed to have no spaces, capitalization, or
+punctuation), and returns `true` iff it is a palindrome.
+
+What is the time and space complexity of your algorithm? Can you find a linear
+time solution?
+
+### 5. Laziness
+
+Lazy evaluation is an evaluation strategy where an expression is evaluated only
+at the last minute. Source does not use lazy evaluation. However, there is a way
+to mimic this effect using _closures_. The trick here is to use the fact that a
+function can "capture" some variables. Consider
+
+```js
+function pair(x, y) {
+  return (f) => f(x, y);
+}
+```
+
+Now we have information regarding `x` and `y` that has been locked into the
+anonymous function returned by `pair`, and can utilize it sometime later.
+
+Now consider something even simpler:
+
+```js
+const x = 1 + 1;
+() => x + 1;
+```
+
+What is the purpose of this? Notice that `x` will be bound to `2` because it is
+eagerly evaluated. However, the function body will not be evaluated to `3` until
+it is called.
+
+Now take a look at this:
+
+```js
+const ones = pair(1, () => ones);
+
+function dtail(p) {
+  return tail(p)();
+}
+```
+
+What do you think this is? Try
+
+```js
+head(ones);
+head(dtail(ones));
+head(dtail(dtail(ones)));
+```
+
+and so on.
+
+### 6. Accumulation
+
+`accumulate` is also known as "fold-right" since we perform the accumulation
+starting from the right side of the list. There is also an analogue "fold-left"
+where we start from the left side of the list.
+
+```js
+f(0 ... f(n-1, f(n, init)))            // fold right
+f(f(f(init, 0), 1), 2 ...)             // fold left
+```
+
+Implement `accumulatel`, which folds from the left, using `accumulate`. Do not
+use `reverse` (that would be too easy).
+
+Hint: Use the idea from question 5 and use functions intelligently to delay the
+accumulation.
+
+## Answers
+
+### Mastery check questions
+
+5. First we have to be clear what is the type of `f` to begin with. It has type
+   `a -> list`. This can be inferred from the initial value of `accumulate`.
+   Therefore `concatMap` has a full signature of
+
+   ```text
+   (a -> list) -> list -> list
+   ```
+
+6. Looking at the signature of `concatMap` we can deduce its behaviour. It can
+   be thought of as `map`ping a function `f` first. `map` with `f` will create a
+   list of lists. Then this result is flattened.
+
+   Looking at this function here, we take in a parameter `n`. The function is
+
+   ```js
+   (x) => map((y) => list(x, y, x * y), enum_list(1, x));
+   ```
+
+   This takes in some number `x` and creates `list(1, 2, ..., x)`. Now to each
+   element in this list, `map` will create `list(x, 1, x)`, `list(x, 2, 2x)`,
+   and so on.
+
+   If you look at this for some time you see that all it is doing is creating
+   the multiplication table.
+
+### Extra questions
+
+1. This algorithm is known as the [Sieve of
+   Eratosthenes](https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes). Note that
+   the Wikipedia link shows a different implementation. You can try to implement
+   that version as well. It would be faster since it does not check every
+   element each run, only the multiples.
+
+   ```js
+   function sieve(xs) {
+       if (is_null(xs)) {
+           return null;
+       } else {
+           const x = head(xs);
+           pair(x, sieve(filter(y => y % x !== 0, tail(xs))));
+       }
+
+   function primes(a, b) {
+       const xs = sieve(enum_list(2, b));
+       return filter(x => x >= a, xs);
+   }
+   ```
+
+   Note that `filter` runs in time `$O(n)$`. Then looking at `sieve`, it runs
+   `filter` for every item, and this means the overall complexity is `$O(n^2)$`.
+   You would be correct if you answered this, although this bound is not tight.
+
+   The implementation by Wikipedia is easier to analyse. This is because they
+   only check multiples at each run, and not every number. Hence the work done
+   each time is exactly $\frac{n}{p_k}$.
+
+2. The limitations make this hard. But the limitations are imposed because we
+   lack mutability. In the upcoming weeks, once we have mutability implementing
+   a queue will become very easy.
+
+   ```js
+   // a queue is a pair of the enqueuing list and the dequeuing list.
+   function queue() {
+     return pair(null, null);
+   }
+
+   function enqueue(x, q) {
+     const enlist = head(q);
+     const delist = tail(q);
+     return pair(pair(x, enlist), delist);
+   }
+
+   function dequeue(q) {
+     const enlist = head(q);
+     const delist = tail(q);
+     if (is_null(enlist)) {
+       return null;
+     } else if (is_null(delist)) {
+       return dequeue(pair(enlist, reverse(enlist)));
+     } else {
+       // pair of the dequeued item and the new queue.
+       return pair(head(delist), pair(enlist, tail(delist)));
+     }
+   }
+   ```
+
+3. The simplest solution would be to just sort the list and take the $k$-th
+   element. That would take time $O(n \log n + k)$. However there is a way to
+   get $O(n)$.
+
+   Take any element and put all those smaller than it in one list,
+   and all those not smaller than it in another. The $k$-th largest element is
+   either the element, in the left list, or in the right list. Depending on the
+   sizes of the two lists we can decide this fact.
+
+   ```js
+   function selectk(xs, k) {
+     if (is_null(xs)) {
+       return null;
+     } else {
+     }
+
+     const pivot = head(xs);
+     const left = filter((x) => x < pivot, tail(xs));
+     const right = filter((x) => x >= pivot, tail(xs));
+     const llen = length(left);
+     const rlen = length(right);
+
+     if (llen === k - 1) {
+       return pivot;
+     } else if (llen > k - 1) {
+       return selectk(left, k);
+     } else {
+       return selectk(right, k - llen - 1);
+     }
+   }
+   ```
+
+   The complexity of this is a difficult question at this level, because it
+   changes depending on the list `xs`. You can see that if `xs` is completely
+   sorted, then the time complexity will be $O(kn)$. When it is completely
+   unsorted then we need some probability theory to give the bounds. This
+   method does not give any improvements because the pivot is fixed at the
+   first element and the worst case will always be $O(kn)$. Is this good? Is
+   this better than $O(n \log n)$? No, because for example if we want to select
+   the median, then $k = \frac{n}{2}$ and this becomes quadratic time.
+
+   The fix is to select the pivot intelligently. There are two options here.
+   The first is we just pick a random pivot each time. The second is to be able
+   to guess at the median element. Both of these methods are our best effort at
+   trying to halve the list each pass. If we manage to exactly halve the list
+   each time, then we will finish in time $O(n)$ regardless of $k$ (can you
+   show why this is the case?).
+
+   Unfortunately there is no way to do this in Source right now, because we do
+   not have random access. This means `list_ref` takes linear time. When arrays
+   are introduced this will be possible, because we can access the pivot in
+   constant time.
+
+4. Just check `equal` on `xs` and `reverse(xs)`.
+
+5. It creates an infinite list!
+
+6. Again:
+
+   ```js
+   f(0, f(1, f(2, ... f(k, init)  // fold right
+   f(f(f(init, 0), 1)...          // fold left
+   ```
+
+   Looking at this, we note that is there was a way for each `f` to know what
+   was the element before it, then we could perhaps solve this problem. We
+   could perhaps come up with something like this:
+
+   ```js
+   // if we convert f(init, f(0, ... into
+   (n => ...(f(n, 0))) (init)
+   // where ... = n => ...(f(n, 1))
+   ```
+
+   Will this work? Let us try evaluating a few steps
+
+   ```js
+   (n => ...(f(n, 0))) (init)
+   ...(f(init, 0))
+   ...(f(f(init, 0), 1))
+
+   ```
+
+   Yes it does!
+
+   ```js
+   function accumulatel(f, init, xs) {
+     return accumulate(
+       (x, d) => (n) => d(f(n, x)),
+       (x) => x,
+       xs
+     )(init);
+   }
+   ```
+
+[^1]: https://en.wikipedia.org/wiki/Primorial

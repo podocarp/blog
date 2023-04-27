@@ -1,0 +1,52 @@
+---
+date: "2020-08-17"
+title: "CS1101S S5"
+summary: ""
+hidden: true
+---
+
+Extra questions:
+
+4. Write a Source function `every_second` that takes a list and returns another
+   list containing the elements at odd indexes. For example:
+
+   ```js
+   // returns ["x", ["y", ["z", null]]]
+   every_second(list("a", "x", "b", "y", "c", "z", "d"));
+   ```
+
+5. Write a Source function `sums` that takes a list of numbers and returns a
+   list, whose first item is the sum of all even indexed items, and the second
+   item is the sum of all odd indexed items.
+
+   ```js
+   // returns: [9, [6, null]]
+   sums(list(1, 2, 3, 4, 5));
+   ```
+
+6. Strings can be represented as lists of characters. This allows us to perform
+   list operations on strings. Write a function `lexico` that takes in two lists
+   of characters `xs` and `ys` and returns `true` if `xs > ys` and `false`
+   otherwise. The relation `>` here is the [lexicographic
+   order](https://en.wikipedia.org/wiki/Lexicographical_order), i.e. the way
+   words are sorted in dictionaries. So if `xs` comes after `ys` in a
+   dictionary, return `true`.
+
+   ```js
+   // returns: true
+   lexico(list("a", "b", "c"), list("a", "b", "b"));
+   // returns: false
+   lexico(list("a", "b", "c"), list("a", "b", "c"));
+   ```
+
+7. Write a function `substr` that takes in lists of characters `xs` and `ys` and
+   returns `true` iff `ys` is a substring of `xs`. For example:
+   ```js
+   // returns: true
+   substr(list("h", "e", "l", "l", "o"), list("h", "e", "l", "l"));
+   ```
+
+## Slides
+
+<EmbedPdf src="/files/cs1101s/5.pdf"/>
+<EmbedPdf src="/files/cs1101s/5_handout.pdf"/>
