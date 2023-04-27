@@ -1,0 +1,69 @@
+---
+date: "2021-03-17"
+title: "Configuration"
+summary: ""
+hidden: true
+---
+
+This section will cover a few system-level configurations you can make to
+improve performance.
+
+## Nix storage optimisations
+
+You may find that Nix uses quite a large amount of storage space. This is simply
+how it works. See [garbage
+collection](https://nixos.org/manual/nix/stable/#sec-garbage-collection).
+
+This enables automatic garbage collection. One may change the `options` to
+`--delete-old` to delete everything other than the current generation.
+
+```nix path=/etc/nixos/configuration.nix
+nix.gc = {
+automatic = true;
+dates = "weekly";
+options = "--delete-older-than 7d";
+};
+```
+
+The next optimisation is to replace identical files in the store with hard
+links. There is no need to run this very often.
+
+```nix path=/etc/nixos/configuration.nix
+nix.optimise = {
+automatic = true;
+dates = [ "weekly" ];
+};
+```
+
+## Power optimisations
+
+Below are a few optimisations. Perhaps the biggest one is to enable powertop's
+automatic configuration. A good resource is the [Arch wiki on power management](https://wiki.archlinux.org/title/Power_management).
+
+```nix path=/etc/nixos/configuration.nix
+boot.kernel.sysctl = {
+  "kernel.nmi_watchdog" = 0;
+  "vm.dirty_writeback_centisecs" = 6000;
+  "vm.laptop_mode" = 5;
+};
+
+powerManagement = {
+  powertop.enable = true;
+  scsiLinkPolicy = "med_power_with_dipm";
+};
+```
+
+If you want your disks to spin down, you can also configure `hdparm`:
+
+```nix path=/etc/nixos/configuration.nix
+powerManagement.powerUpCommands = ''
+${pkgs.hdparm}/sbin/hdparm -S 242 /dev/sda
+${pkgs.hdparm}/sbin/hdparm -S 242 /dev/sdb
+${pkgs.hdparm}/sbin/hdparm -S 242 /dev/sdc
+'';
+
+# etc.
+```
+
+The value 242 is actually a full hour. You may want to visit `man hdparm`
+regarding how this value is calculated.

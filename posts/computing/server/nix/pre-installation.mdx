@@ -1,0 +1,81 @@
+---
+date: "2021-03-16"
+title: "Pre-installation"
+summary: ""
+hidden: true
+---
+
+This section covers things you need to do before installation. This is done on
+the machine you are going to be administering the server from. As mentioned on
+the index page I assume you are running NixOS (and Home Manager as well) on it.
+It is very easy to search up how to do these things if you are not part of this
+secret club.
+
+## GPG
+
+We will need GPG for a couple of things. One of them is because we want a
+central place to manage our keys. This comes in handy when we involve other
+things like `pass` later on. This is extremely simple with Home Manager:
+
+```nix path=~/.config/nixpkgs/home.nix
+services.gpg-agent = {
+  enable = true;
+  enableSshSupport = true;
+  pinentryFlavor = "gtk2";
+};
+```
+
+You can swap the pinentry to whatever you like, but in a graphical environment,
+I think `gtk2` is good.
+
+After this you obviously want to create a GPG key. Try this guide: [fedora
+docs](https://docs.fedoraproject.org/en-US/quick-docs/create-gpg-keys/#creating-gpg-keys-cli).
+You might also wish to search up how to backup your keys safely at this point.
+
+## SSH
+
+Next we want GPG to manage our SSH keys. First, we have to direct SSH over to
+the GPG agent:
+
+```nix path=~/.config/nixpkgs/home.nix
+programs.bash.sessionVariables = {
+  GPG_TTY = "$(tty)";
+  SSH_AUTH_SOCK = "$(gpgconf --list-dirs agent-ssh-socket)";
+};
+```
+
+The simplest thing to do after this is to just log out. Otherwise you can try
+`source ~/.profile` and `gpgconf --kill gpg-agent`.
+
+Next, we generate the SSH key. Execute the following:
+
+```bash user
+gpg2 --expert --edit-key <KEY ID>
+```
+
+where `<KEY ID>` is the name of the key you created just now. You want a
+RSA (set your own capabilities) --- authenticate key of 2048 bits. Just follow
+the prompts and you'll be through. Be sure to `quit` and not `Ctrl-C` out of the
+`gpg` prompt! Finally you want to do
+
+```bash user
+gpg2 --with-keygrip --list-keys
+```
+
+and find the key that you just made. If you do not have any pre-existing keys,
+it will be the only `rsa2048` key you see. Copy the keygrip (the stuff after the
+`=` sign) and do
+
+```bash user
+echo <KEYGRIP> > ~/.gnupg/sshcontrol
+```
+
+Now try `ssh-add -l`, and you should see your key here.
+
+All that is left is to transfer this key to the server. There are many ways of
+doing this, the most primitive and easiest being just using a usb stick.
+
+Actually to save trouble you don't need to do this before you install Nix on the
+server. When booting from the liveCD, all you need to do to enable SSH access is
+to set a root password. Furthermore you will be wasting some effort since you
+might need to re-copy the keys after the installation is performed.

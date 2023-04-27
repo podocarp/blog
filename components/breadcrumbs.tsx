@@ -9,8 +9,6 @@ type BreadcrumbProps = {
 };
 
 /**
- * Takes in `paths`, an array of all paths to generate breadcrumbs for, and
- * `base`, which is the first breadcrumb and also makes up the base url.
  * @param {BreadcrumbProps} props
  */
 export default function Breadcrumbs({ paths, base, currentPath }: BreadcrumbProps) {
@@ -39,7 +37,6 @@ export default function Breadcrumbs({ paths, base, currentPath }: BreadcrumbProp
         }
       </>
     ));
-
 
   return <div
     className="flex flex-row space-x-0 font-mono"

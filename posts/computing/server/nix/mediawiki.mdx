@@ -1,0 +1,64 @@
+---
+date: "2021-12-02"
+title: "Mediawiki"
+summary: "Running mediawiki on NixOs"
+hidden: true
+---
+
+What follows is a fairly minimal config.
+This is also a place where we can show how to provision secrets.
+Setting this up is easy.
+One point to note is to try and avoid mounting files onto `/var/run` in the
+container.
+I haven't experimented too much but I've had it break once from doing that.
+
+```nix path=/etc/nixos/services/mediawiki/default.nix
+{ config, pkgs, port, ... }:
+let
+  pwdfilePath = "/tmp/password";
+in
+{
+  containers.mediawiki= {
+    autoStart = true;
+    ephemeral = true;
+    bindMounts = { # put appropriate binds here
+      "${pwdfilePath}" = {
+        hostPath = config.sops.secrets.mediawiki.path;
+        isReadOnly = true;
+      };
+    };
+
+    config = {
+      services.mediawiki= {
+        enable = true;
+        name = "My Wiki";
+
+        passwordFile = pwdfilePath;
+
+        extensions = {
+          InputBox = pkgs.fetchzip {
+            url = "https://extdist.wmflabs.org/dist/extensions/InputBox-REL1_36-aa70764.tar.gz";
+            sha256 = "0rqvn6rf7jswv02s8ajh31hd5ksvxq84sjpapda0083drxbwj96f";
+          };
+        };
+
+        virtualHost = {
+          hostName = "wiki.home.com";
+          adminAddr = "xdjiaxd@gmail.com";
+
+          listen = [
+          {
+            "ip" = "*";
+            "port" = port;
+            # "ssl" = true;
+          }
+          ];
+        };
+      };
+    };
+
+  };
+
+  sops.secrets."mediawiki" = {};
+}
+```

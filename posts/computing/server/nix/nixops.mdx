@@ -1,0 +1,108 @@
+---
+date: "2022-09-01"
+title: "Deployment with NixOps"
+summary: "Deploying to your server with NixOps"
+---
+
+So far our deployment has been manual.
+Unless you are doing something special, it would have been like this
+
+1. SSH into your machine
+2. Edit the config files there, usually `/etc/nixos/configuration.nix`
+3. Run `nixos-rebuild switch` on the machine.
+4. Logout.
+
+Now this feels rather suboptimal, since
+
+- what if I don't want to edit the config files through SSH, probably on the
+  command line,
+- what if I also don't want to run something like syncthing or keep having to
+  `git pull`,
+- what if I don't even want to manually SSH in and then run the rebuild command,
+- what if my server is trash, like a raspberry pi, and it takes ages to rebuild.
+
+That is why there is `NixOps`.
+NixOps has a lot of functionalities, from being able to provision VMs for you,
+to pushing to cloud services.
+For us, we are interested in its ability to deploy to other Nix machines, **as
+long as** you can SSH into the root user on that machine.
+
+## Before we start
+
+As of writing!
+The latest version of NixOps is actually v2, which is still in pre-release.
+However by default you install the v1.7 version.
+Now they have stopped patching v1.7 to work on v2, and if you install v1.7, you
+will receive a scary warning about some security vulnerability. So, it is
+suggested that you install `nixops_unstable`.
+
+## Getting started
+
+First create a file like this:
+
+```nix path=ops/nixops.nix
+{
+  network = {
+    description = "Server";
+    enableRollback = true;
+    storage.legacy = {
+      databasefile = "~/.nixops/deployments.nixops";
+    };
+  };
+
+  defaults = {
+    imports = [ <PATH TO SERVER CONFIG> ];
+  };
+
+  machine = { ... }:
+  {
+    deployment.targetHost = "<IP OF SERVER>";
+  };
+}
+```
+
+Of course you can just dump your entire server's `configuration.nix` into the
+`defaults` field, but it is much better to keep it in a separate file and import
+it.
+
+Now run
+
+```bash user
+nixops create -d <ALIAS>
+```
+
+where `<ALIAS>` is a name you want to give to this deployment for referencing,
+for example `server`. You should also do this in the directory with the
+`nixops.nix` file, or, supply that directory with the `--network` argument.
+
+Now you can list the deployments and will see something similar:
+
+```bash user=1
+nixops list
++--------------------------------------+--------+-------------+------------+------+
+| UUID | Name | Description | # Machines | Type |
++--------------------------------------+--------+-------------+------------+------+
+| ce792a83-35c6-11ed-96a3-6c02e03edf9a | server | Server | 1 | none |
++--------------------------------------+--------+-------------+------------+------+
+```
+
+Then,
+
+```bash user=1
+nixops deploy
+... a whole bunch of build output ...
+machine> activation finished successfully
+server> deployment finished successfully
+```
+
+## Notes
+
+- Since the deployment is built locally, the `nixpkgs` version used will most
+  likely be that used by your system. You can specify a path to a local copy of
+  `nixpkgs` with the `-I` argument, or pin it with a git checkout in the server
+  configuration file if you want to use a fixed version.
+- I think NixOps deploys to the root user and I am not sure how to change it to
+  for example a user in `@wheel`. So you need to open SSH access for the root
+  user.
+- You can test the deployment on a VM first -- swap out `deploment.targetHost`
+  to `deployment.targetEnv = "virtualbox";`.

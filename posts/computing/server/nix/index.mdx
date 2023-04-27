@@ -1,0 +1,35 @@
+---
+title: "Home server on Nix"
+summary: "An ongoing series of posts on running your own home server on Nix."
+date: "2022-09-01"
+---
+
+This series of posts will cover the set-up of a server running on NixOS from a
+computer running on NixOS. The fact that you are considering Nix implies that
+you think you know your way around Linux. As such, this guide will be more
+cookbook than textbook.
+
+The entries in bold are more interesting things, the rest are just friends we
+make along the journey.
+
+0. [Pre-installation](./pre-installation/) --- gpg and ssh setup
+1. [**ZFS & Installation**](./installation/) --- ZFS setup with removable key encryption and installation of NixOS
+2. Services
+   - [Samba and NFS](./samba/) --- For our network drives
+   - [Misc configs](./misc-configs/) --- Power saving, Nix.
+   - [Networking](./networking/) --- Mainly about setting up dual NICs
+   - [Secrets with password store](./password-store/) --- Handling secrets in Nix with password store (DEPRECATED).
+   - [**Secrets with nix-sops**](./nix-sops/) --- Handling secrets with nix-sops.
+3. Services
+   - [Introduction](./apache/): Apache reverse proxy and containers with tinode as an example
+   - [Prosody](./prosody/): Prosody (a XMPP communication server) in Nix container.
+   - [**Nginx Reverse proxy**](./nginx-reverse-proxy/): How to easily access your services with a reverse proxy.
+   - [Git](./gitea/): Git and Gitea
+   - [Mediawiki](./mediawiki/): Mediawiki, actually just a demo for nix-sops
+4. Operations
+
+   - [**Nixops**](./nixops/): Deployment with NixOps.
+   - [Hydra]: WIP: Hydra for CI.
+
+5. Misc
+   - [Benchmarking](./benchmarking/)

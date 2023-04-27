@@ -1,0 +1,103 @@
+---
+date: "2021-03-20"
+title: "Benchmarking"
+summary: ""
+hidden: true
+---
+
+In this section we cover how to benchmark your server.
+
+## Network
+
+To benchmark the network connection between your server and another (Linux)
+device is simple. You will want the `iperf` tool. This is as simple as `nix-env
+-iA nixos.iperf`. You also want to open an unused port in your firewall. You
+cannot get by this, Nix is very strict on firewalls. There is also an UDP option
+(`s/TCP/UDP`).
+
+```nix path=/etc/nixos/configuration.nix
+firewall.allowedTCPPorts = [ 8080 ];
+```
+
+Now on the server
+
+```bash
+~$ iperf -s -p 8080
+
+---
+
+## Server listening on 8080
+
+```
+
+On the client
+
+```bash
+~$ iperf -c <SERVER IP> -p 8080
+[ 5] local 192.168.0.1 port 39936 connected to 192.168.0.2 port 8080
+[ ID] Interval Transfer Bitrate Retr Cwnd
+[ 5] 0.00-1.00 sec 11.3 MBytes 94.4 Mbits/sec 0 180 KBytes
+...
+```
+
+Fairly good. I pretty much saturate the 100M switch I have, so not much else I can
+do besides spending more money.
+
+## Disk
+
+The thing to note here is to never run anything as root, and double check target
+directories when you are testing on disks lest you wipe something important! To
+be safe create a new dataset/partition away from actual data!
+
+### dd
+
+This is the simplest. This writes 400M of random data.
+
+```bash user=1
+dd if=/dev/urandom of=/nfs/temp bs=4M count=100k
+...
+419430400 bytes (419 MB, 400 MiB) copied, 7.03854 s, 59.6 MB/s
+```
+
+On a remote client the speed is basically bottlenecked by the network link.
+
+```bash user=1
+dd if=/dev/urandom of=/nfs/temp bs=4M count=100k
+...
+419430400 bytes (419 MB, 400 MiB) copied, 46.1586 s, 9.1 MB/s
+```
+
+### Bonnie++
+
+Bonnie++ is a free benchmarking tool released under the GPLv2. It can be handy
+for testing things other than just throughput, such as CPU usage etc.
+Installation is as simple as `nix-env -iA nixos.bonnie`. All you need to do
+is to specify a directory.
+
+```bash user=1
+bonnie++ -d /nfs/temp
+```
+
+Now by default it will try to write a file that is twice the size of your RAM
+(of the machine running the tool, not the machine with the disks). This is to
+negate any effects of caching, but if it is a bit insane then just disable the
+checks. Here I tell the tool to test with 1024M instead.
+
+```bash user=1
+bonnie++ -d /nfs/temp -s 1024 -r 0
+...
+Version 1.98 ------Sequential Output------ --Sequential Input- --Random-
+-Per Chr- --Block-- -Rewrite- -Per Chr- --Block-- --Seeks--
+Name:Size etc /sec %CP /sec %CP /sec %CP /sec %CP /sec %CP /sec %CP
+host 1G 1121k 85 10.9m 0 11.0m 0 1871k 99 +++++ +++ 2606 11
+Latency 29919us 44us 36us 17889us 33us 30us
+Version 1.98 ------Sequential Create------ --------Random Create--------
+host -Create-- --Read--- -Delete-- -Create-- --Read--- -Delete--
+files /sec %CP /sec %CP /sec %CP /sec %CP /sec %CP /sec %CP
+16 0 0 0 6 0 0 0 0 0 3 0 0
+Latency 1017ms 124ms 230ms 601ms 28701us 990ms
+1.98,1.98,host,1,1616211449,1G,,8192,5,1121,85,11198,0,11284,0,1871,99,+++++,+++,2606,11,16,,,,,29,0,8503,6,66,0,31,0,416,3,70,0,29919us,44us,36us,17889us,33us,30us,1017ms,124ms,230ms,601ms,28701us,990ms
+```
+
+If the txt output isn't very nice on the eyes, you can copy the last line and
+pipe it through `bon_csv2html` and open it in a browser instead.

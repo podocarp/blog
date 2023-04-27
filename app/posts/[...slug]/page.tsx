@@ -30,7 +30,6 @@ export default function Page({ params }: PageProps) {
     : <Post slug={params.slug} post={post} />;
 }
 
-
 type PostProps = {
   slug: string[];
   post: Post;

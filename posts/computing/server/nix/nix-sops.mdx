@@ -1,0 +1,57 @@
+---
+date: "2021-12-02"
+title: "Secrets with nix-sops"
+summary: "Setting up secrets storage on NixOS"
+---
+
+In this section we will make use of
+[nix-sops](https://github.com/Mic92/sops-nix) to handle our secrets.
+They have a fairly comprehensive readme, so just follow that.
+
+Here are some notes:
+
+- Secrets are only provisioned if the attrset `sops.secrets.<secret>` is non
+  null. Usually you achieve this by setting `sops.secrets.<secret>.owner` to a
+  proper value. If the service you are launching is running as root and you
+  don't need to worry about the owner, you can also simply do
+  `sops.secrets.<secret> = {}` to make the secret available anyway.
+- Its is recommended that you use `age` for encryption instead of `pgp` to save
+  some time. I know I have a section on setting up `pgp` but it is entirely not
+  worth it, I have tried.
+- Contrary to what the example file wants you to believe, only YAML strings are
+  accepted. If you try storing YAML arrays, it will work but you won't be able
+  to pass it into Nix.
+
+As an example on how secret provisioning is done, the readme provides a few
+examples, or you can take a look at the [mediawiki config](./mediawiki).
+
+Here is a tip for accessing secrets in containers.
+The only way for containers to access the secrets is if you bind mount them.
+However this can be a problem if the services in the container don't have the
+right permissions.
+There is a simple and declarative way to manage this, albeit it is a little
+dirty.
+We use `systemd-tmpfiles` to copy the file into a temp file with the right
+permissions.
+
+```nix path=example.nix
+containers.example = {
+  bindMounts = {
+    "/var/lib/service/auth" = {
+      hostPath = config.sops.secrets."example".path;
+      isReadOnly = true;
+    };
+  };
+  config = {
+    systemd.tmpfiles.rules = [
+      "C /tmp/authfile - - - - /var/lib/service/auth
+        "z /tmp/authfile 0444 pengu users - -"
+    ];
+  }
+
+  sops.secrets."example" = {};
+}
+```
+
+Now your service can read from `/tmp/authfile` instead.
+You might want to change the mode and owner to a more secure setting.

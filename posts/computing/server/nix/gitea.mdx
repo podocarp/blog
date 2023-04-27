@@ -1,0 +1,94 @@
+---
+date: "2021-08-10"
+title: "Git and Gitea"
+summary: "Installing Git and Gitea on NixOS"
+hidden: true
+---
+
+## Git
+
+Part of my goals is to set up a git server. This is actually quite useful.
+This git server will back up a `password-store` repository, and later on it will
+be used to host a wiki (Gollum). First is just a barebones set-up
+
+We create a new home directory for a new git user:
+
+```bash root
+zfs create tank/git
+```
+
+```nix path=/etc/nixos/configuration.nix
+users.users.git = {
+  isNormalUser = true;
+  home = "/tank/git";
+  openssh.autorizedKeys.keys = [ <SSH KEY HERE> ];
+};
+```
+
+Then, `ssh` into the new `git` user and we create a new repository
+
+```bash user
+mkdir <repo>.git
+cd <repo>.git; git init --bare
+```
+
+In case you have an actual git repository somewhere else,
+
+```bash user
+git remote set-url origin git@<SERVER ADDRESS>:<repo>.git
+git push
+```
+
+## Gitea
+
+The previous section allowed you to set up git repositories manually. However,
+what if we wanted to have a nice frontend instead? This is where we enter
+[Gitea](https://gitea.com/).
+
+```nix path=/etc/nixos/containers/gitea/default.nix
+{ config, port, sshPort, ... }:
+{
+  containers.gitea = {
+    autoStart = true;
+    ephemeral = true;
+    bindMounts = {
+      "/var/lib/gitea" = {
+        hostPath = "/tank/local/gitea";
+        isReadOnly = false;
+      };
+    };
+
+    config = {
+      services.gitea = {
+        enable = true;
+        domain = "<DOMAIN>";
+        rootUrl = "https://<DOMAIN>";
+        httpPort = port;
+        ssh.clonePort = sshPort;
+
+        settings = {
+          server = {
+            START_SSH_SERVER = true;
+            SSH_DOMAIN = "ssh.%(DOMAIN)s";
+            LANDING_PAGE = "login";
+          };
+        };
+      };
+    };
+  };
+}
+```
+
+There are a ton of [settings you can
+tweak](https://docs.gitea.io/en-us/config-cheat-sheet/#repository-repository).
+Regarding our configuration, here are some pointers:
+
+- ssh needs its own port because we are in a container. The ssh traffic would
+  never reach the container if we used the system ssh port.
+- Apache cannot reverse proxy ssh traffic. This means we would have to open the
+  ssh port in our firewall.
+- You can try to do some funny port forwarding tricks to get the ssh traffic to
+  pass through port 443 together with https. However due to the way port
+  forwarding work on `systemd-nspawn` (namely, [it ignores the loopback
+  device](https://github.com/systemd/systemd/issues/6106)), I have given up on
+  this.

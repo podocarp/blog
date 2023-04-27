@@ -1,0 +1,170 @@
+---
+date: "2021-05-05"
+title: "Tinode chat server and Apache reverse proxy on NixOS"
+summary: ""
+disabled: true
+---
+
+This page will document how to set up a Tinode chat server and place it behind
+an Apache reverse proxy. This serves as an example for a pattern that will be
+repeated through the rest of this section on hosting web services.
+
+We will follow their very convenient guide on setting up Tinode in docker (see
+[readme](https://github.com/tinode/chat/blob/master/docker/README.md)). We need
+to start two docker containers, one containing the database and another
+containing the server.
+
+```nix path=/etc/nixos/containers/tinode/default.nix
+{
+  virtualisation.oci-containers.containers."tinode-mysql" = {
+    autoStart = true;
+    image = "mysql:5.7";
+    environment = {
+      MYSQL_ALLOW_EMPTY_PASSWORD = "yes";
+    };
+    extraOptions = [ "--network=tinode-net" "--name=mysql" ];
+  };
+
+  virtualisation.oci-containers.containers."tinode-srv" = {
+    autoStart = true;
+    image = "tinode/tinode-mysql:latest";
+    ports = [ "6060:6060" ];
+    extraOptions = [ "--network=tinode-net" ];
+  };
+}
+```
+
+These are translated directly from the readme and its the bare minimum you need
+to get the server up.
+
+Notice the `network` flag. The two containers communicate through a bridge. We
+set up a dirty systemd service to spawn this bridge:
+
+```nix path=/etc/nixos/containers/tinode/default.nix
+systemd.services.tinode-net = {
+  description = "Brings up docker bridge tinode-net";
+  after = [ "network.target" ];
+  serviceConfig.Type = "oneshot";
+  script =
+    ''
+    ${pkgs.docker}/bin/docker network create tinode-net 2&> /dev/null
+    '';
+};
+```
+
+This will get you far enough. However, any changes made to the chat server (for
+example user registration, messages, etc.) are not persistent across reboots.
+This is because the images are deleted after they are stopped, so the database
+vanishes. To solve this, we use docker volumes. Since we have a nice big
+filesystem, this also solves the problem of backups. For example:
+
+```nix path=/etc/nixos/containers/tinode/default.nix
+virtualisation.oci-containers.containers."tinode-mysql" = { # ...
+  volumes = [
+    "/var/log/mysql:/var/log"
+      "/tank/public/tinode/mysql:/var/lib/mysql"
+  ];
+}
+virtualisation.oci-containers.containers."tinode-srv" = { # ...
+  volumes =
+    [
+    "/tank/public/tinode/uploads:/uploads"
+      "/var/log/tinode:/var/log"
+    ];
+}
+```
+
+Note the mapping is `<host>:<container>`. This also allows us to expose the logs
+to the host system. Now we can do `tail --follow /var/log/tinode/tinode.log` for
+instance.
+
+You may also want to change some settings. For example the default minimum username length is 3, and there is no TLS enabled. You could change these by mounting your `tinode.conf` as a volume:
+
+```nix path=/etc/nixos/containers/tinode/default.nix
+virtualisation.oci-containers.containers."tinode-srv" = {
+    # ...
+
+    volumes =
+          let
+            conf = ./tinode.conf;
+          in
+          [
+            "${conf}:/tinode.conf"
+            # ...
+          ];
+        environment = {
+          EXT_CONFIG = "/tinode.conf";
+        };
+}
+```
+
+Nix also resolves relative paths to absolute paths upon evaluation. Also, do
+note that if `tinode.conf` contains important keys. Read the comments in the
+template file given in the tinode repository and don't share it with others!
+
+## Apache reverse proxy
+
+We will use Apache `httpd` to set up a reverse proxy now. This has a few
+benefits:
+
+- This is an elegant way of exposing services as subdomains rather than having
+  to remember a port number for each.
+- This also means that our firewall only needs to open ports 80 and 443.
+- We can also ask `httpd` to handle TLS for us instead of relying on the
+  individual services.
+  ```nix path=/etc/nixos/containers/tinode/default.nix
+  services.httpd.virtualHosts."chat"= {
+    hostName = "<YOUR FRIENDLY CANONICAL URL HERE>";
+    addSSL = true;
+    sslServerCert = <PATH TO CERT>;
+    sslServerKey = <PATH TO KEY>;
+    extraConfig = ''
+      ProxyRequests Off
+      ProxyPreserveHost On
+      ProxyPass / http://localhost:6060/
+      ProxyPassReverse / http://localhost:6060/
+      '';
+  };
+  ```
+  ```nix path=/etc/nixos/configuration.nix
+  services.httpd = {
+    enable = true;
+    adminAddr = "<YOUR EMAIL>";
+    extraModules = [
+      "proxy"
+        "proxy_http"
+    ];
+  };
+  ```
+
+Now you will be able to access tinode at whatever URL you put in. However you
+might note that you receive connection errors. This is because tinode uses
+websockets which are not passed through by the proxy. Insert the following
+lines to let websockets through:
+
+```nix path=/etc/nixos/containers/tinode/default.nix
+extraCofig = '' # ...
+RewriteEngine on
+RewriteCond %{HTTP:UPGRADE} ^WebSocket$ [NC]
+RewriteCond %{HTTP:CONNECTION} ^Upgrade$ [NC]
+RewriteRule .\* ws://localhost:6060%{REQUEST_URI} [P]
+''
+```
+
+I have not tested if the following is necessary, I don't think it is, but it
+doesn't hurt to include it.
+
+```nix path=/etc/nixos/configuration.nix
+extraModules = [
+# ...
+"proxy_wstunnel"
+]
+```
+
+## Summary
+
+There is some room for improvement here. If you have played with this you may
+notice how docker makes a pig breakfast out of your firewall. This is because
+both Nix and docker use `iptables`, so there are some conflicts there.
+Apparently podman does not do this so consider switching. However docker was
+used simply because tinode quite conveniently supplies their own images.

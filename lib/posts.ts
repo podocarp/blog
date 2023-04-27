@@ -2,10 +2,14 @@ import { allPosts } from 'contentlayer/generated';
 import { compareDesc } from 'date-fns';
 import { cache } from 'react';
 
-export const GetAllPosts = cache(() => allPosts.filter(post => !post.disabled));
+const GetAllPosts = cache(() => allPosts.filter(post => !post.disabled));
 
+/** Returns all non hidden files sorted by date.
+ */
 export const GetAllPostsSortedByDate = cache(
-  () => GetAllPosts().sort((a, b) => compareDesc(new Date(a.date), new Date(b.date)))
+  () => GetAllPosts()
+    .filter(post => !post.hidden)
+    .sort((a, b) => compareDesc(new Date(a.date), new Date(b.date)))
 );
 
 export const FindPostByPath = cache(
@@ -13,7 +17,6 @@ export const FindPostByPath = cache(
     return GetAllPosts().find(post => post._raw.flattenedPath === path);
   }
 );
-
 
 export const FindPostsInCategory = cache(
   (slug: string[]) => {

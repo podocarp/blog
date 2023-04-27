@@ -1,0 +1,161 @@
+---
+date: "2021-06-20"
+title: "Reverse proxy in NixOS"
+summary: "Use your NixOS config as a central config hub to define your reverse proxies."
+---
+
+In this section we present two ways for you to access your web services easily.
+The first involves making Nix generate a HTML index page on the fly, the second
+involves reverse proxying.
+
+## Method 1: Contents page
+
+Now that we have transmission set up, we have a small problem. The web UI is
+hosted on a strange port number --- how are we to remember all these ports?
+There are a few ways to solve this problem. One would be to set up a reverse
+proxy for every single service. We have already seen how that can be achieved.
+In this section I present something much simpler. We will be creating a contents
+page of sort that simply enumerates every single service in a list.
+
+First of all, for this to even make sense, the service port numbers cannot be
+hardcoded. In fact this is already the case (look at the previous section on
+Transmission). In case you do not know how to make it work, you want to be doing
+something like this:
+
+```nix path=/etc/nixos/server.nix
+{ config, pkgs, ... }:
+let
+tranmission_port = 9091;
+in
+{
+  ((import ./containers/transmission/default.nix) {port = tranmission_port;})
+}
+```
+
+This allows the `server.nix` file to be the single source of truth regarding
+port numbers. Following this, what we want to do is to specify a list of lists
+`[service_name, service_port]`. Then, we will write a function to convert this
+list into a single HTML page and serve that. When you forget your port numbers,
+you can visit this page to find a direct link to the correct service.
+
+```nix path=/etc/nixos/server.nix
+services.httpd.virtualHosts."<NAME>".locations."/" = {
+  alias = (builtins.toFile "index.html"
+      ("<html><h1>Welcome. A list of services:</h1><ul>" +
+       (builtins.foldl'
+        (x: y:
+         x + ''<li><a href="http://<SERVER IP>:${toString (builtins.elemAt y 1)}">'' +
+         ''${builtins.elemAt y 0}</a></li>'')
+        "" [
+          ["Transmission" trans_port]
+        ]
+       ) + "</ul></html>"));
+};
+```
+
+## Method 2: Reverse proxy
+
+In the case that your server is public, you might not be comfortable showing
+your services off to the outside world. In that case you might want to change
+the port this page is served on:
+
+```nix path=/etc/nixos/server.nix
+services.httpd.virtualHosts."<NAME>".listen = [{
+  ip = "*";
+  port = 1234;
+}];
+```
+
+Then you can set up a private hostname on your router (so this will be an
+internal address like `home.lan`)[^1], and then you can hide it behind a reverse
+proxy to port `1234`:
+
+```nix path=/etc/nixos/server.nix
+services.httpd.virtualHosts."home" = {
+  serverAliases = ["<HOST NAME>"];
+  extraConfig = ''
+    ProxyRequests Off
+    ProxyPreserveHost On
+
+    ProxyPass / http://localhost:1234/
+    ProxyPassReverse / http://localhost:1234/
+
+    '';
+};
+```
+
+You should then be able to visit your contents page at `<HOST NAME>` whereas
+outsiders wouldn't be able to.
+
+What a moment of serendipity! This is brilliant! Let's now combine the two
+methods above to just straight up rediect people from `service.home` to
+`localhost:port`!
+
+```nix path=/etc/nixos/services/https/default.nix
+{ ... }:
+{
+  services.httpd.virtualHosts = builtins.listToAttrs (map
+      (xs: {
+         name = builtins.elemAt xs 0;
+         value = {
+           serverAliases = ["${builtins.elemAt xs 0}.home"];
+           extraConfig = ''
+             ProxyRequests Off
+             ProxyPreserveHost On
+             ProxyPass / http://localhost:${builtins.elemAt xs 1}/
+             ProxyPassReverse / http://localhost:${builtins.elemAt xs 1}/
+           '';
+          }; [
+        ["Transmission" trans_port]
+       ]
+       }
+      )
+    );
+}
+```
+
+What epic wizadry! Does this convince you of the power of Nix? Now you
+can visit `transmission.home` and it will redirect you to the proper site.
+Furthermore, whenever you add a new service, simply append the config into the
+list and it will be automatically configured!
+
+The following is a similar idea but for `nginx` instead.
+The `portMap` parameter is still the same list of pairs as above.
+
+```nix path=/etc/nixos/services/nginx/default.nix
+{ config, portMap, ... }:
+{
+  services.nginx= {
+  enable = true;
+  virtualHosts =
+    let
+      # Maps a list [name, port] into a config that we want
+      configgen = (host: xs:
+        let
+          name = builtins.elemAt xs 0;
+          port = toString (builtins.elemAt xs 1);
+        in
+        {
+          name = "${name}.${host}";
+          value = {
+            locations."/".proxyPass = "http://localhost:${port}";
+          };
+        }
+      );
+    in
+    # portMap is a list of lists of [name, port]
+    # for each hostname, we generate the config for name.hostname
+    (builtins.foldl'
+      (x: y: x // builtins.listToAttrs (map (configgen y) portMap))
+      {}
+      [ "home.com" "jiaxiaodong.com" ]
+    );
+  };
+}
+```
+
+[^1]:
+    If your DNS uses `dnsmasq`, the easiest way to do this is to add
+    `address/home/<IP ADDR>` to `/etc/dnsmasq.conf`. This will also resolve
+    subdomains like `app.home`. Since you cannot add wildcards into the `hosts`
+    file, this is really the best option.

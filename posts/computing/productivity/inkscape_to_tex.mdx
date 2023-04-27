@@ -1,0 +1,212 @@
+---
+date: "2019-11-19"
+title: "Inkscape and LaTeX"
+summary: "A lightweight way to insert and edit Inkscape svgs into LaTeX speedily with Vim."
+---
+
+## Problem
+
+Latex might be great for typesetting, but when it comes to drawing, you're in
+for a whole lot of pain. I still remember the days when I stupidly tried to draw
+graphs out with tikz.
+
+I was very much inspired by [this blog
+post](https://castel.dev/post/lecture-notes-2/), in which the author detailed
+how he has some cool tricks to insert inkscape drawings directly into his Latex
+documents.
+
+I checked out his repo, but thought that his way of handling it was way too
+heavy. It sets up a whole daemon to wait for events, and it also depended on
+`rofi` which I don't use. Also you have to install it as a python package, and I
+thought it would be better if you just did it natively in Vim.
+
+## Solution
+
+My solution came through the [Ultisnips](https://github.com/SirVer/ultisnips)
+plugin. This power that this snippet engine brings is the ability to execute
+python code within the snippets. All you need is literally just Ultisnips.
+
+### The snippet
+
+This is the preparation snippet:
+
+```vim
+priority 1000
+snippet fig "Figure block preparation" w
+fig $1 fig$0
+endsnippet
+```
+
+All this does is to give us a unique format that is easier to parse later on.
+Then what happens later is, after the user escapes from this snippet, `fig
+title fig<Tab>`, the main snippet activates:
+
+```vim
+priority 10000
+snippet "fig (.*) fig" "Insert figure" wr
+\begin{figure}[ht]
+\centering
+\def\svgwidth{${3:\linewidth}}
+\import{./figures}{${1:`!p
+if snip.c != "":
+	pass
+else:
+	import os
+	import re
+
+	figureDir = os.path.join(os.getcwd(), "figures/")
+	regex = r'\w+'
+	figureName = "-".join([x.lower() for x in re.findall(regex, match.group(1))])
+	figurePath = figureDir + figureName + '.svg'
+
+	if os.path.isfile(figurePath):
+		snip.rv = "File already exists!"
+	else:
+		import subprocess
+		templatePath = os.path.expanduser("~/.config/inkscape/templates/default1024.svg")
+		subprocess.call(['mkdir', '-p', figureDir])
+		subprocess.check_output(['cp', templatePath, figurePath])
+		subprocess.call(['inkscape', figurePath])
+		snip.rv = figureName
+`}.pdf_tex}
+\caption{${2:caption}}
+\label{fig:$1}
+%edit $1 edit%
+%recomp $1 recomp%
+\end{figure}
+$0
+endsnippet
+```
+
+Let us go through step by step to see what this does.
+
+Ultisnips actually runs each snippet multiple times to check for "convergence"
+([#375](https://github.com/SirVer/ultisnips/issues/375)). This would be a big
+problem for us if we did not de-bounce, since it would cause multiple instances
+of Inkscape to be spawned. Luckily, `snip.c` is populated by Ultisnips to represent the
+text currently represented by this block of python. Hence we simply check if it
+is not empty `snip.c != ""` before executing. I am unsure of a better way to do
+it other than these ugly conditionals.
+
+Next we just have some variable definitions, and perform a simple translation
+into kebab case which is friendlier for file names. This means `hello World ` is
+translated into `hello-world`.
+
+If the file exists we just announce it and exit. This part can be customized but
+generally if there is a name conflict it is easy to hit `uu`, change the name,
+and `<Tab><Tab>`. I don't have a use-case for importing the same image multiple
+times.
+
+If all goes well, we will copy a default template over. This is _not_ there by
+default! For me, I just created a `1024x768` blank svg and saved it at the
+path shown. We use `cp` because it's lighter than `copy()`. Finally we simply
+pass the file to Inkscape and wait.
+
+### Editing and recompiling
+
+The usual way to save an Inkscape document as something comprehensible by Latex
+is through the save dialogue. Now that is way too many keystrokes. There is a
+very simple way to solve this.
+
+If you notice, in the snippet above two Latex comments were created at the
+bottom of the figure:
+
+```vim
+%edit $1 edit%
+%recomp $1 recomp%
+```
+
+The purpose of these two comments is to form two "hyperlinks" lying there for
+future use.
+
+Here's the two snippets involved:
+
+```vim
+snippet "%recomp (.*) recomp%" "Recompile svg" wr
+%recomp `!p
+if snip.c != "":
+    pass
+else:
+    import subprocess
+    figurePath = os.path.join(os.getcwd(), "figures/", match.group(1))
+    subprocess.call(['inkscape', '--export-pdf', figurePath+'.pdf', '--export-latex', figurePath+'.svg'])
+    snip.rv = match.group(1)
+` recomp%$0
+endsnippet
+
+snippet "%edit (.*) edit%" "Edit svg" wr
+%edit `!p
+if snip.c != "":
+    pass
+else:
+    import subprocess
+    figurePath = os.path.join(os.getcwd(), "figures/", match.group(1) + '.svg')
+    subprocess.call(['inkscape', figurePath])
+    snip.rv = match.group(1)
+` edit%$0
+endsnippet
+```
+
+Again for both we perform our de-bouncing. Then we simply execute Inkscape with
+corresponding flags, et voila! Mission accomplished.
+
+## Advanced Features
+
+Recompiling is just too troublesome. I want the document to reload as I update
+the svg in Inkscape. Also, a separate `edit` and `compile` is too much work, and
+it requires manual navigation. The snippet should be triggering the compiling
+instead, and `edit` has absorb the work of the main snippet as well. We want a
+unified editing interface.
+
+Here's the changes to the main snippet:
+
+```diff
+-        subprocess.call(['inkscape', figurePath])
++        subprocess.call(['inkscape', '--export-pdf', figureDir+figureName+'.pdf', '--export-latex', figurePath])
+
+-%edit $1 edit%
++%edit $1 edit%$4
+
+-%recomp $1 recomp%
+```
+
+Just some simple cleaning up. Now the cursor moves to behind `edit` to prepare
+to trigger our new `edit` snippet:
+
+```vim
+snippet "%edit (.*) edit%" "Edit svg" wr
+%edit `!p
+if snip.c != "":
+    pass
+else:
+    import subprocess
+    figureStem = os.path.join(os.getcwd(), "figures/", match.group(1))
+    figurePath = figureStem + '.svg'
+    proc = subprocess.Popen(['inkscape', figurePath]) # open in bg
+
+    from inotify_simple import INotify, flags
+    inotify = INotify()
+    inotify.add_watch(figurePath, flags.MODIFY)
+
+    update = lambda : subprocess.call(['inkscape', '--export-pdf', figureStem+'.pdf', '--export-latex', figurePath])
+    while True:
+        if proc.poll() is not None:
+            update()
+            break	# inkscape closed
+        else:
+            l = inotify.read(timeout=1000)	# block and wait for inotify
+            if (len(l) > 0):
+                update()
+
+    inotify.close()
+    snip.rv = match.group(1)
+` edit%$0
+endsnippet
+```
+
+The main changes here are:
+
+- We use `Popen` to open Inkscape in the background now;
+- We use
+  [`inotify_simple`](https://inotify-simple.readthedocs.io/en/latest/#introduction) to watch for changes;
+- We automatically recompile after edits instead of waiting for the user.

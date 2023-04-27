@@ -1,0 +1,271 @@
+---
+date: "2021-06-20"
+title: "Prosody chat server on NixOS"
+summary: "Prosody chat server on NixOS"
+hidden: true
+---
+
+Prosody is a XMPP communications server. It is really easy to set up on Nix, and
+after we are done we will have a voice server capable of
+
+- file/image uploads/sharing
+- group chats (public/password gated)
+- voice and video chats
+- ability to write your own bots
+
+In this setup, since Prosody has a Nix module, we will opt for the Nix module
+together with a Nix container instead of using Docker. This makes configuration
+absolutely painless. There will also be no need for a reverse proxy since we are
+not hosting a web application.
+
+[The Nix manual has a section on
+prosody](https://nixos.org/manual/nixos/stable/#module-services-prosody-basic-usage).
+The container is set up as follows:
+
+```nix path=/etc/nixos/containers/prosody/default.nix
+{ config, pkgs, ... }:
+{
+  containers.prosody = {
+    autoStart = true;
+    ephemeral = true;
+    bindMounts = {
+      "/ssl" = {
+        hostPath = toString <PATH TO YOUR SSL FILE LOCATION>;
+        isReadOnly = true;
+      };
+      "/var/lib/prosody" = {
+        hostPath = "/tank/local/prosody";
+        isReadOnly = false;
+      };
+    };
+  }
+}
+```
+
+The bind mounts allows the server state to persist across reboots. They are not
+created automatically so you will want to create the `/tank/local/prosody`
+folder or it will crashloop. We can demonstrate how to generate TLS certificates
+automatically later on, but now we move on to the setup of the actual server:
+
+```nix path=/etc/nixos/containers/prosody/default.nix
+{ config, pkgs, ... }:
+{
+  ...
+    config = {
+      services.prosody = {
+        enable = true;
+        admins = [ "<ID>@<YOUR VIRTUAL HOST>" ];
+        ssl.cert = "/ssl/host.cert";
+        ssl.key = "/ssl/host.key";
+        virtualHosts."<YOUR VIRTUAL HOST>" = {
+          enabled = true;
+          domain = "<YOUR DOMAIN>";
+          ssl.cert = "/ssl/host.cert";
+          ssl.key = "/ssl/host.key";
+        };
+        muc = [ {
+          domain = "conference.<DOMAIN>";
+        } ];
+        uploadHttp= {
+          domain = "https://upload.<DOMAIN>";
+        };
+
+        modules.motd = true;
+        modules.watchregistrations = true;
+
+        extraConfig = ''
+          log = "/var/lib/prosody/prosody.log"
+          motd_text = [[Welcome! Type /help -a for a list of commands.]]
+          '';
+        package = pkgs.prosody.override {
+          withCommunityModules = [ "http_upload" ];
+        };
+      };
+    };
+}
+```
+
+Be sure to edit to your own configuration. There are certain interesting things
+to note:
+
+- The virtual host is _virtual_ and so can be anything. I have given it the same
+  name as my domain.
+- Note that the upload domain has `https`.
+- Note that MUC does not have `http`.
+- Note that the virtual host domain name does not have `http`.
+- The above is so because upload depends on the Prosody HTTP server. The other
+  services are not performed over HTTP.
+- Uploads go to `/var/lib/prosody/http_upload` by default.
+- Remember to forward the right ports: 5281 for HTTPS and 5280 for
+  HTTP.
+- You may want to adjust `services.prosody.uploadHttp.{uploadExpireAfter,
+uploadFileSizeLimit}`. See
+  [here](https://search.nixos.org/options?channel=21.05&show=services.prosody.uploadHttp.uploadFileSizeLimit&from=0&size=50&sort=relevance&query=prosody.uploadhttp)
+  for their descriptions.
+
+At this stage you will need to create user accounts manually. To do so first we
+enter the container then user `prosodyctl`:
+
+```bash root
+nixos-container root-login prosody
+prosodyctl adduser <JID>
+```
+
+To allow users to create their own accounts, add the extra configuration:
+
+```nix path=/etc/nixos/containers/prosody/default.nix
+services.prosody = {
+  ...
+  modules.register = true;
+  extraConfig = ''
+    ...
+    allow_registration = true
+  '';
+};
+```
+
+This is disabled by default because of the possibility of getting spammed.
+
+## SSL with Let's Encrypt
+
+We can use ACME to request a SSL certificate from Let's Encrypt. First we enable
+the service together with a dummy endpoint:
+
+```nix path=/etc/nixos/services/acme/default.nix
+{ dir, ... }:
+{
+  security.acme = {
+    email = "<YOUR EMAIL>";
+    acceptTerms = true;
+  };
+
+  services.httpd.virtualHosts."root"= {
+    hostName = "<YOUR DOMAIN>";
+    documentRoot = dir;
+  };
+
+  systemd.tmpfiles.rules = [
+    "d ${dir} 0777 root root"
+  ];
+}
+```
+
+Note the extra argument. This allow greater extensibility, and separation of
+concern. ACME shouldn't be responsible for keeping track of which services need
+certificates. Instead, the services themselves specify those details, and the
+main ACME module only serves as scaffolding.
+
+This creates an empty path `dir` where `acme` will places its challenges.
+`httpd` will then serve it to `hostName`, following which `acme` will use it to
+validate your domain's ownership. Next, add the following lines to request a
+certificate for our prosody module:
+
+```nix path=/etc/nixos/containers/prosody/default.nix
+{ pkgs, dir, ... }:
+{
+  security.acme.certs = {
+    "<YOUR DOMAIN>" = {
+      webroot = dir;
+      email = "<YOUR EMAIL>";
+      extraDomainNames = [
+        "<YOUR DOMAIN>"
+      ];
+    };
+  };
+  ...
+}
+```
+
+Now when you restart the service it would most likely fail to start. This is
+because of permission issues from the bind mounted `ssl`. ACME creates the files
+with a group that is unavailable in our container. To solve this we simply
+force the groups to agree:
+
+```nix path=/etc/nixos/containers/prosody/default.nix
+{
+  ...
+  users.groups.prosody.gid = 149;
+  security.acme.certs.group = "prosody";
+  containers.prosody.config.users.groups.prosody.gid = 149;
+  containers.prosody.services.prosody.group = "prosody";
+}
+```
+
+## User guide
+
+For end users, XMPP is slightly harder to set up than other messaging services.
+Below is a simple user guide you can replicate and share with your users.
+
+### What is this?
+
+[XMPP](https://xmpp.org/) is a protocol for instant messaging. It is a set of
+rules that allow for the exchange of information between clients and servers. It
+is very robust, and allows for fairly complex suite of features not limited to:
+
+- Voice/video chat
+- Bots and games
+- Multi user chat
+- File sharing
+
+Your network administrator has created a XMPP server and has kindly granted you
+permission to use it. This short guide serves as an onboarding document.
+
+### Set up
+
+Since XMPP is only a protocol, it cannot be used directly, Instead, we need a
+client to be able to talk with the server and start chatting with others. There
+is a big list of clients [here](https://xmpp.org/software/clients.html), but
+this guide will use [Gajim](https://gajim.org/) since it is fairly popular and
+works on Linux and Windows.
+
+1. Install Gajim. On Linux check your package managers. Launch Gajim.
+2. You will be prompted to add an user. Add an user.
+   - If your administrator has provided you with credentials, use those. Your
+     username should look something like `abc@xyz.com`.
+   - If you do not have credentials, click "sign up". In this case your
+     administrator should have provided you with the server name. Input that.
+     - If your administrator has specified a domain name or port number, tick
+       "advanced settings" and set them in the next menu.
+     - Otherwise, proceed.
+   - Provide a username and password and you are done.
+   - If you are unable to sign up, speak to your administrator. Tell him to
+     enable `allow_registration`.
+3. Now that you are signed in, we will want to chat.
+   1. Ask your friend for their ID. This is the full path including the `@`
+      portion.
+   2. Go to `Accounts > "your@account.com" > Add Contact`.
+   3. Enter their ID under "XMPP Address" and add the contact.
+   4. Once your friend accepts your friend request you're all set.
+
+There are some helpful plugins that might enhance your experience. Visit `Gajim > Plugins > Available`.
+You might want to click these:
+
+- Url image preview
+- Clients icons
+- Clickable Nicknames
+- Source Code Syntax Highlight
+  and press "Install/Update"
+
+If Url image preview does not work, you might have to go to the plugin settings
+(click the cog in the plugin menu) and turn on "Preview all Image URLs" and turn
+off "HTTPS Verification".
+
+If syntax highlighting does not work you might need to `pip install pygments`.
+For Nix users, you can try something like this (the following is for home
+manager):
+
+```nix path=~/.config/nixpkgs/home.nix
+nixpkgs.overlays = [
+  (self: super: {
+    gajim = super.gajim.override {
+      extraPythonPackages = ps: with ps; [ pygments ];
+    };
+  })
+];
+```
+
+Some other configs you might want to enable to make life more comfy (these are
+under `Gajim > Preferences`):
+
+- General > Window Layout > Single window for everything
+- Chats > Message Receipts

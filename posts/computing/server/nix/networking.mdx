@@ -1,0 +1,68 @@
+---
+date: "2021-03-23"
+title: "Networking"
+summary: ""
+hidden: true
+---
+
+NixOS makes the configuration of networks so easy it's magical. We cover a few
+use cases here.
+
+The motherboard I use came with two NICs. I will configure one `eth0` to face
+the Internet and `eth1` to face the home network. This is useful in the future
+to prevent things like file transfers in the home network kneecapping Internet
+facing services like web servers.
+
+The general advice is to have the two NICs on two subnets. To segregate it more,
+I have set up two separate VLANs on the router for them. One benefit of doing
+this is that you do not have to fiddle with DHCP settings to configure subnets.
+`eth0` will be on the `192.168.0.0/24` subnet and `eth1` will be on
+`192.168.1.0/24`.
+
+Another thing we need to set-up is routing. We want all home network traffic
+(destination `192.168.1.0/24`) to go through `eth1` and all Internet traffic
+(destination `0.0.0.0/0`) to go through `eth0`. While we're at it, we also need to
+disable DHCP on `eth1`, because my router's DHCP advertises the gateway for the
+home network. Of course you need to set up a static lease on your router as
+well.
+
+```nix path=/etc/nixos/configuration.nix
+networking = {
+  interfaces.eth0 = {
+    useDHCP = true;
+    ipv4.routes = [
+    {
+      address = "0.0.0.0";
+      prefixLength = 0;
+      via = "<GATEWAY IP>";
+      options = {
+        dev = "eth0";
+      };
+    }
+    ];
+  };
+
+  interfaces.eth1 = {
+    ipv4.addresses = [
+    {
+      address = "<STATIC LEASE IP>";
+      prefixLength = 24;
+    }
+    ];
+    ipv4.routes = [
+    {
+      address = "192.168.1.0";
+      prefixLength = 24;
+      options = {
+        dev = "eth1";
+      };
+    }
+    ];
+  };
+};
+```
+
+To be absolutely sure it works, plug out `eth0` and check that Internet is
+disabled on the server but you should still be able to contact it from the home
+network. Do the same for `eth1` but with roles reversed. Or you can check `route
+-n` or something like that.

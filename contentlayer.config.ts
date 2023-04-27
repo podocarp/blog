@@ -22,8 +22,15 @@ export const Post = defineDocumentType(() => ({
     },
     disabled: {
       type: 'boolean',
-      description: 'If true, post will be hidden from view.',
+      description: 'If true, post will be disabled (inaccessible).',
       required: false,
+      default: false,
+    },
+    hidden: {
+      type: 'boolean',
+      description: 'If true, post will be hidden from all posts page but still available through for example a hyperlink.',
+      required: false,
+      default: false,
     },
   },
   computedFields: {

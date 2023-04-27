@@ -1,0 +1,134 @@
+---
+date: "2021-08-12"
+title: "Setting up NFS and Samba on NixOS"
+summary: ""
+hidden: true
+---
+
+## NFS
+
+After going through setting up our RAID array we want to create a network shared
+dataset using NFS. This is fairly easy. First enable NFS server support
+
+```nix path=/etc/nixos/configuration.nix
+services.nfs.server.enable = true;
+```
+
+Import the pool if you haven't done so already. Next,
+
+```bash root
+zfs create -o sharenfs=rw=192.168.0.0/24 tank/public
+zfs share -a
+```
+
+OpenZFS (what we are using) has fewer options than Oracle ZFS. The only one
+pertaining to us is `rw=192.168.0.0/24`. This will restrict `rw` access to
+clients on the provided subnet. You can also try `ro` with a smaller subnet to
+restrict write permissions. The last command shares all datasets. Try executing
+
+```bash root
+exportfs -rv
+```
+
+to see that your dataset is shared.
+
+On the client system,
+
+```nix path=/etc/nixos/hardware-configuration.nix
+fileSystems."<NFS PATH>" = {
+device = "<SERVER IP>:/tank/public";
+fsType = "nfs";
+};
+```
+
+Right out of the box you might meet some permission issues. You can try to
+`chown` the pool such that both sides agree on permissions. If you couldn't care
+less, `chmod 777`.
+
+## Samba
+
+If you want to share to a Windows device you will have to use Samba. The ZFS
+`sharesmb` option does not work for me. Setting up Samba independently is easy
+enough though:
+
+```nix path=/etc/nixos/configuration.nix
+environment.systemPackages = [ pkgs.smbclient ];
+services.samba = {
+  enable = true;
+  securityType = "user";
+  shares.<NAME> = {
+    path = "/tank/public";
+    writeable = "yes";
+    browseable = "yes";
+  };
+  shares.global = {
+    "server min protocol" = "SMB2_02";
+  };
+};
+```
+
+Next, for every user that needs access, create a user
+
+```nix path=/etc/nixos/configuration.nix
+users.users.<USER> = {
+  createHome = false;
+  shell = "/run/current-system/sw/bin/nologin";
+};
+```
+
+on your server and then issue `smbpasswd -a <USER>`. Set the password and issue
+this to your user. From Windows your user would be able to log in with these
+credentials to `\\<SERVER IP>\<NAME>`.
+
+## NFS and Samba
+
+This is not recommended if your share gets large. In a home situation, it is
+still very acceptable. Only proceed if you understand the implications and
+shortcomings of this set-up (mainly cross protocol conflicts) and can live with
+them
+
+Since we are at home, we can just assume that everyone is friendly and give RW
+access to a single user. Create a new user for this purpose:
+
+```nix path=/etc/nixos/configuration.nix
+users.users.fileshare = {
+  createHome = false;
+  shell = "/run/current-system/sw/bin/nologin";
+  group = "fileshare";
+  uid = 42069;
+};
+users.groups.fileshare.gid = 42069;
+```
+
+The `uid` and `gid` defaults used by NFS are 65534. This might be the
+`nobody:nobody` user and group but to be sure we explicitly create an user. Now
+
+```bash root
+zfs set sharenfs=rw=192.168.1.0/24,all_squash,anonuid=42069,anongid=42069 tank
+```
+
+Now every user will be mapped to `fileshare:fileshare` when writing through NFS.
+Now to sort out Samba, run `smbpasswd -a fileshare` and set a password. You
+should now be good to go!
+
+## Snapshots
+
+It is simple to enable automatic snapshots.
+
+```bash root
+zfs set com.sun:auto-snapshot=true tank
+```
+
+The following makes daily snapshots and keeps a week's worth. Change depending
+on your usage intensity.
+
+```nix path=/etc/nixos/configuration.nix
+services.zfs.autoSnapshot = {
+  enable = true;
+  frequent = 0;
+  hourly = 0;
+  daily = 7;
+  weekly = 1;
+  monthly = 0;
+};
+```

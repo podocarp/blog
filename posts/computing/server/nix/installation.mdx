@@ -1,0 +1,408 @@
+---
+date: "2021-03-16"
+title: "Installation"
+summary: ""
+hidden: true
+---
+
+We will assume a working internet connection on the server. If you do not have
+internet, you cannot run Nix (the package manager).
+
+We will be be running ZFS as our filesystem. Built-in snapshotting, compression,
+encryption are some of its boons. Therefore read some of the warnings on the
+[NixOS wiki](https://nixos.wiki/wiki/NixOS_on_ZFS) first. If it doesn't suit
+you, running ext4 is very easy, you can just follow the Nix manual
+(`nixos-help`).
+
+## ZFS
+
+### Partitioning
+
+I separate my disks into two classes. I have a SSD that I will use to hold the
+`/boot` and `/` partitions. I then have a few other drives that I will set up
+RAIDZ on to hold other data. I will not recommend you mixing these two.
+
+There are two choices now for your non-root disks. The first choice is to create
+an empty GPT partition on every disk that spans the whole disk, and give every
+partition a good label. The [Arch
+wiki](https://wiki.archlinux.org/index.php/ZFS#Using_GPT_labels) gives some
+justification on why this is a good idea. It is fairly straightforward with
+`gdisk`. After this you can check that you did it right like so
+
+```bash user=1
+ls -la /dev/disk/by-partlabel/
+lrwxrwxrwx 1 root root 15 Mar 16 14:08 ssd -> ../../nvme0n1p1
+lrwxrwxrwx 1 root root 10 Mar 16 14:14 sea-1 -> ../../sdb1
+...
+```
+
+If you can't be bothered, just refer to the disks by the paths in this folder
+
+```bash user=1
+ls -l /dev/disk/by-id
+lrwxrwxrwx 1 root root 9 Mar 16 14:34 ata-ST4XXX -> ../../sdb
+lrwxrwxrwx 1 root root 13 Mar 16 14:34 nvme-euXXX -> ../../nvme0n1
+...
+```
+
+This might be easier for now because you do not need to worry about partition
+alignment and all that. Furthermore ZFS encourages one to allocate entire disks
+to it and not partitions.
+
+For the root disk we will create three partitions, one for the EFI partition,
+one for ZFS, and another for swap space. One may choose to set up EFI and swap
+on ZFS, but it is not worth the hassle. While we're at it, please assign the
+partitions some sensible labels. The partition table will look something like
+this:
+
+```text
+Number  Start (sector)    End (sector)  Size       Code  Name
+   1            2048          206847   100.0 MiB   EF00  EFI
+   2          206848      1929586687   920.0 GiB   BF00  zroot
+   3      1929586688      1953525134   11.4 GiB    8200  swap
+```
+
+Resize the partitions as you wish. We also do not need more than one
+partition for ZFS. We can separate the `/home` and `/` partitions on ZFS without
+doing any manual partitioning. After this we can use the partitions (change the
+disk labels to your own):
+
+```bash root
+mkfs.vfat /dev/disk/by-partlabel/EFI
+mkswap /dev/disk/by-partlabel/swap
+swapon /dev/disk/by-partlabel/swap
+```
+
+We will mount the ZFS partition in the following section after some set-up. Also
+the EFI partition is not mounted for the same reason.
+
+### Zpool creation
+
+Storage is congregated into zpools in ZFS. They can span logical devices, or
+just be a single partition, there is great freedom here.
+
+First we should check the sector size:
+
+```bash user=1,3
+blockdev --getpbsz /dev/disk/by-partlabel/ssd
+512
+blockdev --getpbsz /dev/disk/by-partlabel/sea-1
+4096
+```
+
+As you can see my two disks report different sector sizes. For 512 and 4096 we
+want to specify `ashift=12` later on. For larger drives you may encounter 8096
+sector sizes and you will want `ashift=13` instead. The [OpenZFS
+documentation](https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Workload%20Tuning.html?highlight=ashift#alignment-shift-ashift)
+talks about the reasoning behind this.
+
+Now create the root pool.
+
+```bash root=1
+zpool create \
+ -o ashift=12 \
+ -O xattr=sa \
+ -O acltype=posixacl \
+ -O atime=off\
+ -O compression=lz4 \
+ -O mountpoint=none \
+ -O normalization=formD \
+ -R /mnt \
+ zroot /dev/disk/by-partlabel/zroot
+```
+
+The following is an elaboration on the options (`-o` is for the pool and `-O` is
+for filesystems).
+
+- `ashift` has been mentioned above.
+- `xattr` and `acltype` is needed and recommended for `systemd-journald`. See
+  Nix wiki.
+- `atime=off` disables access time logging. Grants a performance boost.
+- `compression=lz4` enables compression using `lz4`, grants a performance boost.
+- `mountpoint=none` disables automount as we want to use `fstab` for
+  auto-mounting by NixOS.
+- `normalization=formD` is a recommended setting controlling UTF-8
+  normalization.
+- `-R /mnt` mounts the pool at `/mnt` after the command as a _temporary_ mount
+  point.
+
+### Dataset creation
+
+Datasets are to ZFS what partitions are to other filesystems. The Nix wiki
+recommends a hierarchy like this:
+
+```text
+- zroot
+  - local
+    - local/home
+    - local/root
+  - nix
+    - nix/nix
+```
+
+This adds some separation of concerns. For instance, we will encrypt the entire
+`local` but there is little need to encrypt `nix`. There is no need to backup
+any NixOS stuff, so we will only back up the `local` dataset, or even more
+efficiently, backup only `local/home` and the NixOS configuration file. More on
+that later.
+
+Create the dataset for nix stuff.
+
+```bash root
+zfs create -o mountpoint=none zroot/nix
+zfs create -o mountpoint=legacy zroot/nix/nix
+```
+
+- `mountpoint=none` disables mounting and `mountpoint=legacy` allows us to mount
+  the dataset using `mount`. Otherwise you will have to use `zfs mount`. Again,
+  this is to allow us to manage the mounts with `fstab` which Nix will generate.
+
+Create the dataset for the root partition. We enable encryption here and all
+children will inherit this property. If you do not want this then encrypt the
+children separately.
+
+```bash root=1,7,8
+zfs create \
+ -o mountpoint=none \
+ -o encryption=aes-128-gcm \
+ -o keyformat=passphrase \
+ -o keylocation=prompt \
+ zroot/local
+zfs create -o mountpoint=legacy zroot/local/root
+zfs create -o mountpoint=legacy zroot/local/home
+```
+
+- `encryption` enables encryption. We explicitly specify `aes-128-gcm`
+  algorithm to be used. One may refer to
+  [stackexchange](https://crypto.stackexchange.com/questions/6842/how-to-choose-between-aes-ccm-and-aes-gcm-for-storage-volume-encryption)
+  on a brief comparison between the two algorithms available. Furthermore 128
+  bits is generally sufficient for home use, otherwise feel free to use 256 bits
+  instead.
+- `keyformat` and `keylocation` specifies how ZFS obtains the encryption key
+  (password). Our settings means that ZFS will just ask you for a password
+  prompt. However it is much more robust to hold the keyfile in some removable
+  media simply because entering into a prompt might not be feasible at times.
+
+In the future you might notice that the encryption key remains in memory. To
+completely unmount a drive, you want to do
+
+```bash root
+zfs unmount <ENCRYPTED DISK>
+zfs unload-key <ENCRYPTED DISK>
+```
+
+As a sanity check run
+
+```bash root
+zpool export zroot
+zpool import -d /dev/disk/by-id zroot
+zfs load-key zroot/local
+zfs list
+```
+
+This unmounts the disks, then searches all devices (`-d`) for `zroot` and
+imports it. If you encounter a permission error it might be that you forgot to
+unlock an encrypted dataset, see `zfs load-key` above.
+
+Next we do the actual mounting. This is fairly simple.
+
+```bash root
+mount -t zfs zroot/local/root /mnt
+mkdir /mnt/{nix,home,boot}
+mount -t zfs zroot/local/home /mnt/home
+mount -t zfs zroot/nix/nix /mnt/nix
+mount /dev/disk/by-partlabel/EFI /mnt/boot
+```
+
+For more comprehensive docs, of course refer to the [Oracle
+documentation](https://docs.oracle.com/cd/E53394_01/html/E54801/gayok.html).
+
+### RAIDZ
+
+We also want to create a pool of large mechanical disks and set them up in
+RAIDZ2. When choosing a RAID strategy, one must evaluate the
+value of data against efficiency and speed. It is a balancing act between these
+three attributes. RAIDZ2 is a good equilibrium for me, since double parity
+drastically lowers the chance of failures since any two disks can fail (compare
+with RAID0 or RAIDZ1). Furthermore it is more efficient, by using only two disks
+for parity (compare with mirroring which uses half the number of disks).
+Performance is also not really a consideration.
+
+In any case, it is set-up very similar to how we set-up the root partition:
+
+```bash root=1
+zpool create \
+ -o ashift=12 \
+ -O atime=off\
+ -O compression=lz4 \
+ -O mountpoint=/tank \
+ -O normalization=formD \
+ tank raidz2 \
+ ata-6Z \
+ ata-D8 \
+ ata-WB \
+ ata-R1 \
+ ata-QW \
+ ata-SW
+```
+
+The `mountpoint` is no longer `legacy` since we cannot `zfs share` a dataset
+mounted as legacy. To have it mount on boot, include the following
+
+```nixos path=/etc/nixos/configuration.nix
+boot.zfs.extraPools = [ "tank" ];
+boot.zfs.forceImportAll = false;
+```
+
+Note that if you have any encrypted datasets this might block startup depending
+on how your key is set up! Actually as long as your root filesystem is encrypted
+then it is not too big of a problem to leave the key for `tank` in the root file
+filesystem. Or see one of the solutions below: [removable encryption
+key](#removable-encryption-key).
+
+You will also have to replace the drive IDs (the `ata-xxx` entries) with yours;
+run `ls -l /dev/disk/by-id` to find yours.
+
+If you are going to consider putting more than one dataset on the array, then it
+is recommended to enable encryption for them separately instead of globally
+here. You will find yourself stuck later on if you suddenly have the need to
+create an unencrypted dataset on this array. To enable encryption you will
+perform the same steps as detailed above.
+
+## NixOS installation
+
+Now we are ready to install the system. Make sure you have mounted everything!
+
+```bash root
+nixos-generate-config --root /mnt
+```
+
+Below is a minimal configuration file to get you started. It can be used as a
+drop-in replacement for the generated file, though you need to modify some
+settings.
+
+```nix path=/etc/nixos/configuration.nix lineno
+{ config, pkgs, ... }:
+
+{
+  imports =
+    [ # Include the results of the hardware scan.
+      ./hardware-configuration.nix
+    ];
+
+  boot.supportedFilesystems = [ "zfs" ];
+  # If you have any encrypted datasets enable this:
+  boot.zfs.requestEncryptionCredentials = true;
+
+  # Use the GRUB 2 boot loader.
+  boot.loader.grub = {
+    enable = true;
+    version = 2;
+    efiSupport = true;
+    device = "nodev";
+  };
+
+  # Define your hostname.
+  networking.hostName = "localhost";
+
+  # Set to your timezone
+  time.timeZone = "UTC";
+
+  # This will be deprecated soon. See comments in config file.
+  networking.useDHCP = true;
+  # ZFS requires this setting
+  networking.hostId = "<random 8-digit hex string>";
+
+  # Define a user account. Don't forget to set a password with ‘passwd’.
+  users.users.username = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
+  };
+
+  environment.systemPackages = with pkgs; [
+    wget
+    vim
+    tmux
+    git
+    pciutils # for lspci
+  ];
+
+  security.sudo = {
+    enable = true;
+    wheelNeedsPassword = false;
+  };
+
+  # Enable the OpenSSH daemon.
+  services.openssh.enable = true;
+
+  system.stateVersion = "20.09";
+}
+```
+
+You might want to check `/etc/nixos/hardware-configuration.nix` and see if
+everything is alright there. If all is well, execute
+
+```bash root
+nixos-install
+```
+
+and reboot.
+
+## Optional steps
+
+### Removable encryption key
+
+If you have encrypted your root dataset then upon reboot you will be greeted by
+a prompt for the password. This can be very inconvenient at times, because:
+
+- there is nobody nearby to enter the password, or
+- the password is intentionally long and complex, or
+- the server has no input devices or display.
+
+Now what you want is to have some kind of removable drive you insert in before
+booting and take out after startup. You would keep this safe at some separate
+place. There is a very simple way to implement this system. We will improvise on
+this [github comment](https://github.com/openzfs/zfs/issues/6556#issuecomment-497010957).
+Actually the [Arch wiki](https://wiki.archlinux.org/index.php/Install_Arch_Linux_on_ZFS#Loading_password_from_USB-Stick)
+also provides a similar solution, but their solution destroys the removable
+disk (you cannot store other things on it anymore).
+
+Here lies the trick. Since the key is retrieved using `getline()`, it will stop
+after encountering the first newline character. Thus we can write our key into
+any partition, as long as we end it off with a newline. So first, create a small
+partition with `fdisk`. Here is output from my `fdisk`. You will want to give it
+a good label too, I called mine `key`.
+
+```text
+Device     Start      End  Sectors  Size Type
+/dev/sdc1   2048     2049        2    1K Microsoft basic data
+/dev/sdc2   4096 30629342 30625247 14.6G Microsoft basic data
+```
+
+Now `/dev/sdc2` can be used for whatever you like, and we will store the key on
+`/dev/sdc1`. Execute the following:
+
+```bash root
+dd if=<(echo -e "<YOUR KEY HERE>\n") of=/dev/disk/by-partlabel/key
+```
+
+The key is simply stored as plaintext on the small partition. At the end of the
+day, regardless of how you obfuscate this, if you let someone steal your keys
+then they can unlock your gate.
+
+Now, we modify the dataset in question to change where it sources its key from:
+
+```bash root
+zfs change-key -o keylocation=file:///dev/disk/by-partlabel/key zroot/local
+```
+
+You can repeat the process to create a whole keychain on a USB stick. Since it
+is troublesome to shift and resize partitions, I suggest just creating slots for
+around ten keys or so. To do the partitioning all in one shot:
+
+```bash path=part.sh lineno
+for i in {1..10}
+do
+ echo ":size=1,name=key$i";
+done | sfdisk /dev/sdc
+```
