@@ -1,7 +1,6 @@
 export default function NavBar() {
   return <nav
     className="flex justify-center md:justify-start mb-10 space-x-4"
-    key="navbar"
   >
     {[
       ['Home', '/'],

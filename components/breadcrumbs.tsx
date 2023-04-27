@@ -1,4 +1,5 @@
 import { FindPostByPath } from "@/lib/posts";
+import { Fragment } from "react";
 
 type BreadcrumbProps = {
   /** Array of all paths to create breadcrumbs for.
@@ -30,21 +31,18 @@ export default function Breadcrumbs({ paths, base, currentPath }: BreadcrumbProp
       const isEnabled =
         (url !== currentPath && FindPostByPath(url)) ||
         name === base;
-      return <>/
+      return <Fragment key={url}>/
         {isEnabled
           ? <a
             href={`/${base}/${url}`}
-            key={url}
             className="max-w-fit underline"
           >
             {name}
           </a>
           : <span>{name}</span>
         }
-      </>;
+      </Fragment>;
     });
 
-  return <div
-    className="flex flex-row space-x-0 font-mono"
-  >{crumbs}</div>;
+  return <div className="flex flex-row space-x-0 font-mono">{crumbs}</div>;
 }
