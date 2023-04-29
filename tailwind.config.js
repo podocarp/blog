@@ -22,6 +22,19 @@ module.exports = {
         'gradient-conic':
           'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
+      keyframes: {
+        fadein: {
+          "from": {
+            "opacity": 0,
+          },
+          "to": {
+            "opacity": 1
+          },
+        },
+      },
+      animation: {
+        "fadein": "fadein 300ms forwards"
+      },
     },
   },
   plugins: [

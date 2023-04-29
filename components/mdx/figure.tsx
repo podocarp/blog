@@ -1,26 +1,27 @@
 import Image from "next/image";
+import imageSize from "image-size";
+import { join } from "path";
 
 export type FigureProps = {
   src: string;
-  alt?: string;
   caption?: string;
-  width?: number;
-  height?: number;
   wrap?: "left" | "right" | boolean;
 };
 
 export default function Figure(props: FigureProps) {
+  const imgPath = join("public", props.src);
+  const size = imageSize(imgPath);
 
   return (
-    <figure className="">
+    <figure className={`table p-4 content-center m-auto float-${props.wrap}`}>
       <Image
         {...props}
-        alt={props.alt ?? "image"}
-        width={props.width ?? 256}
-        height={props.height ?? 256}
+        alt={"figure"}
+        width={size.width}
+        height={size.height}
       />
       {props.caption ? (
-        <figcaption>
+        <figcaption className="table-caption caption-bottom text-center p-0 m-0">
           <p>{props.caption}</p>
         </figcaption>
       ) : (

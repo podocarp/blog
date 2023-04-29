@@ -1,5 +1,5 @@
 import Breadcrumbs from '@/components/breadcrumbs';
-import mdxComponents from '@/components/mdx';
+import { mdxComponents } from '@/components/mdx';
 import { PostCards } from '@/components/postcards';
 import TimeTag from '@/components/timetag';
 import { FindPostByPath, FindPostsInCategory } from '@/lib/posts';

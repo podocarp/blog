@@ -21,12 +21,14 @@
     "date-fns": "^2.29.3",
     "eslint": "8.39.0",
     "eslint-config-next": "13.3.1",
+    "image-size": "^1.0.2",
     "next": "13.3.1",
     "next-contentlayer": "^0.3.1",
     "postcss": "8.4.23",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "tailwindcss": "3.3.1",
+    "tailwindcss-touch": "^1.0.1",
     "typescript": "5.0.4"
   }
 }

@@ -1,9 +1,12 @@
+import { MDXComponents } from "mdx/types";
 import EmbedPdf from "./embedpdf";
 import Figure from "./figure";
-import Gallery from "./gallery";
+import Gallery from "./gallery/gallery";
 
-export default {
+
+export const mdxComponents: MDXComponents = {
   EmbedPdf,
   Figure,
   Gallery,
-};
+}
+
