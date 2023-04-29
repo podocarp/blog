@@ -28,7 +28,6 @@ export default function Breadcrumbs({ paths, base, currentPath }: BreadcrumbProp
       return acc;
     }, [{ url: "", name: base }])
     .map(({ url, name }) => {
-      console.log(currentPath, url);
       const isEnabled =
         (url !== currentPath && FindPostByPath(url)) ||
         name === base;

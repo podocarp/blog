@@ -38,6 +38,14 @@ type PostProps = {
 
 export function Post({ slug, post }: PostProps) {
   const MDXContent = useMDXComponent(post.body.code);
+  const next = post.next;
+  const prev = post.prev;
+
+  const linksToPrevAndNext = (next || prev)
+    && <div className="overflow-hidden">
+      {prev && <a className="float-left" href={prev}>&lsaquo; Prev</a>}
+      {next && <a className="float-right" href={next}>Next &rsaquo;</a>}
+    </div >;
 
   return (
     <>
@@ -45,7 +53,9 @@ export function Post({ slug, post }: PostProps) {
       <main className="prose text-black">
         <h1 className="py-4 m-0">{post.title}</h1>
         <TimeTag date={post.date} />
+        {linksToPrevAndNext}
         <MDXContent components={mdxComponents} />
+        {linksToPrevAndNext}
       </main>
     </>
   );

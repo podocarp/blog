@@ -32,6 +32,16 @@ export const Post = defineDocumentType(() => ({
       required: false,
       default: false,
     },
+    prev: {
+      type: 'string',
+      description: 'Relative link to previous post. If present, will display links to it at the top and bottom of the page.',
+      required: false,
+    },
+    next: {
+      type: 'string',
+      description: 'Relative link to next post. If present, will display links to it at the top and bottom of the page.',
+      required: false,
+    },
   },
   computedFields: {
     url: {
