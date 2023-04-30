@@ -1,4 +1,3 @@
-import { Head } from "next/document";
 import "./style.css";
 import "../../public/katex/katex.min.css";
 
