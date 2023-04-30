@@ -36,7 +36,7 @@ type PostProps = {
   post: Post;
 };
 
-export function Post({ slug, post }: PostProps) {
+function Post({ slug, post }: PostProps) {
   const MDXContent = useMDXComponent(post.body.code);
   const next = post.next;
   const prev = post.prev;
