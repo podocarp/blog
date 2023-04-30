@@ -12,24 +12,22 @@ cookbook than textbook.
 The entries in bold are more interesting things, the rest are just friends we
 make along the journey.
 
-0. [Pre-installation](./nix/pre-installation/) --- gpg and ssh setup
-1. [**ZFS & Installation**](./nix/installation/) --- ZFS setup with removable key encryption and installation of NixOS
-2. Services
+0. Installation
+   - [Pre-installation](./nix/pre-installation/) --- gpg and ssh setup
+   - [ZFS & Installation](./nix/installation/) --- ZFS setup with removable key encryption and installation of NixOS
    - [Samba and NFS](./nix/samba/) --- For our network drives
    - [Misc configs](./nix/misc-configs/) --- Power saving, Nix.
    - [Networking](./nix/networking/) --- Mainly about setting up dual NICs
+2. **Ops and tooling**
    - [Secrets with password store](./nix/password-store/) --- Handling secrets in Nix with password store (DEPRECATED).
-   - [**Secrets with nix-sops**](./nix/nix-sops/) --- Handling secrets with nix-sops.
-3. Services
+   - [Secrets with nix-sops](./nix/nix-sops/) --- Handling secrets with nix-sops.
+   - [Nginx Reverse proxy](./nix/nginx-reverse-proxy/): Generation of reverse proxies from the system config.
+   - [Nixops](./nix/nixops/): Deployment with NixOps.
+   - [Hydra](./nix/hydra/): WIP: Hydra for CI.
+3. Applications
    - [Introduction](./nix/apache/): Apache reverse proxy and containers with tinode as an example
    - [Prosody](./nix/prosody/): Prosody (a XMPP communication server) in Nix container.
-   - [**Nginx Reverse proxy**](./nix/nginx-reverse-proxy/): How to easily access your services with a reverse proxy.
    - [Git](./nix/gitea/): Git and Gitea
    - [Mediawiki](./nix/mediawiki/): Mediawiki, actually just a demo for nix-sops
-4. Operations
-
-   - [**Nixops**](./nix/nixops/): Deployment with NixOps.
-   - [Hydra]: WIP: Hydra for CI.
-
-5. Misc
+4. Misc
    - [Benchmarking](./benchmarking/)

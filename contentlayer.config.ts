@@ -1,4 +1,12 @@
 import { defineDocumentType, makeSource } from 'contentlayer/source-files';
+import { rehypePerLine } from './lib/rehype-plugins/rehype-per-line';
+import rehypeHighlight from "rehype-highlight";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import remarkGfm from "remark-gfm";
+import nix from "highlight.js/lib/languages/nix";
+import vim from "highlight.js/lib/languages/vim";
+import { rehypeMetaAsAttributes } from './lib/rehype-plugins/rehype-meta-as-attr';
 
 export const Post = defineDocumentType(() => ({
   name: 'Post',
@@ -58,4 +66,24 @@ export const Post = defineDocumentType(() => ({
 export default makeSource({
   contentDirPath: 'posts',
   documentTypes: [Post],
+  mdx: {
+    remarkPlugins: [remarkGfm, remarkMath],
+    rehypePlugins: [
+      rehypeMetaAsAttributes,
+      [
+        rehypeHighlight,
+        {
+          detect: true,
+          languages: { nix, vim },
+          aliases: {
+            nixos: "nix",
+            sh: "shell",
+            ini: "conf",
+          },
+        },
+      ],
+      rehypePerLine,
+      rehypeKatex,
+    ],
+  },
 });

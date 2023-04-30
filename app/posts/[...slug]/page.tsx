@@ -49,7 +49,7 @@ export function Post({ slug, post }: PostProps) {
 
   return (
     <>
-      <Breadcrumbs paths={slug} base="posts" currentPath={post.url} />
+      <Breadcrumbs crumbs={slug} base="posts" currentUrl={post.url} />
       <main className="prose text-black">
         <h1 className="py-4 m-0">{post.title}</h1>
         <TimeTag date={post.date} />
@@ -66,7 +66,7 @@ function Category({ slug, post }: PostProps) {
 
   return (
     <>
-      <Breadcrumbs paths={slug} base="posts" currentPath={post.url} />
+      <Breadcrumbs crumbs={slug} base="posts" currentUrl={post.url} />
       <main className="prose text-black">
         <h1 className="py-4 m-0">Category: {post.title}</h1>
         <MDXContent components={mdxComponents} />

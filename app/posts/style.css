@@ -1,0 +1,12 @@
+.gutter {
+  @apply select-none float-left block font-bold;
+  width: 3ch;
+}
+
+.bash-root-sign {
+  @apply text-red-500 !important;
+}
+
+.bash-user-sign {
+  @apply text-slate-100;
+}

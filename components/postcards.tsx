@@ -10,17 +10,17 @@ type PostCardProps = {
 
 export function PostCard({ title, url, summary, date }: PostCardProps) {
   return <div
-    className="grid grid-cols-2 pb-4"
+    className="grid grid-cols-3 pb-4"
     key={url}
   >
     <a
       href={url}
-      className="text-l md:text-xl font-mono w-fit"
+      className="text-l w-fit col-span-2"
     >
       {title}
     </a>
     <TimeTag date={date} />
-    <p className="m-0 text-black text-sm md:text-base">
+    <p className="m-0 col-span-full text-justify">
       {summary}
     </p>
   </div>;
