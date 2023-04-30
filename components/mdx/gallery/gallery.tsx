@@ -17,6 +17,7 @@ export default function Gallery({ dir }: GalleryProps) {
     const imgUrl = join("/", dir, file.name);
     return <GalleryItems
       path={imgUrl}
+      key={imgUrl}
       height={size.height || 0}
       width={size.width || 0}
     />;
