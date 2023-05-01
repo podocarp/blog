@@ -5,7 +5,7 @@ type TimeTagProps = {
 };
 
 export default function TimeTag({ date }: TimeTagProps) {
-  return <time dateTime={date} className="justify-self-end w-fit text-xs md:text-sm text-slate-500">
+  return <time dateTime={date} className="w-fit text-xs md:text-sm text-slate-500">
     {format(parseISO(date), 'LLLL d, yyyy')}
   </time>;
 }

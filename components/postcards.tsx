@@ -10,7 +10,7 @@ type PostCardProps = {
 
 export function PostCard({ title, url, summary, date }: PostCardProps) {
   return <div
-    className="grid grid-cols-3 pb-4"
+    className="grid grid-cols-1 md:grid-cols-3 pb-4"
     key={url}
   >
     <a
@@ -19,7 +19,9 @@ export function PostCard({ title, url, summary, date }: PostCardProps) {
     >
       {title}
     </a>
-    <TimeTag date={date} />
+    <div className="md:justify-self-end">
+      <TimeTag date={date} />
+    </div>
     <p className="m-0 col-span-full text-justify">
       {summary}
     </p>
@@ -32,12 +34,9 @@ type PostCardsProps = {
 
 export function PostCards({ posts }: PostCardsProps) {
   const postcards = posts.map(post =>
-    PostCard({
-      title: post.title,
-      url: post.url,
-      summary: post.summary,
-      date: post.date,
-    })
+    <PostCard
+      title={post.title} url={post.url} summary={post.summary} date={post.date}
+    />
   );
 
   return <div className="w-full grid gap-5">
