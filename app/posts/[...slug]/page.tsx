@@ -43,8 +43,20 @@ function Post({ slug, post }: PostProps) {
 
   const linksToPrevAndNext = (next || prev)
     && <div className="overflow-hidden">
-      {prev && <a className="float-left" href={prev}>&lsaquo; Prev</a>}
-      {next && <a className="float-right" href={next}>Next &rsaquo;</a>}
+      {prev &&
+        <a
+          className="float-left" href={prev}
+          title={prev}
+        >
+          &lsaquo; Prev
+        </a>}
+      {next &&
+        <a
+          className="float-right" href={next}
+          title={next}
+        >
+          Next &rsaquo;
+        </a>}
     </div >;
 
   return (

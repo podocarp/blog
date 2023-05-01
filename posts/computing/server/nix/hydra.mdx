@@ -5,4 +5,29 @@ summary: "Settings up a build server with Hydra."
 prev: ./nixops
 ---
 
-WIP!
+Work in progress!
+
+Hydra is a build system for Nix.
+Here is an example config assuming there is an instance of postgres running on
+the same machine so that Hydra can login through a socket.
+
+```nix
+{ port, dbPort, ... }:
+let
+  postgresPort = toString dbPort;
+  socketPath = "/var/run/postgresql";
+in
+{
+  services.hydra = {
+    enable = true;
+    hydraURL = "hydra.example.com";
+    port = port;
+    notificationSender = "hydra@localhost";
+    buildMachinesFiles = [ ];
+    useSubstitutes = true;
+    dbi = "dbi:Pg:dbname=hydra;user=hydra;port=${postgresPort}";
+  };
+
+  systemd.services."hydra-init.service".after = [ "postgresql.service" ];
+}
+```
