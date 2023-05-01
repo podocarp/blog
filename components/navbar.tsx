@@ -5,8 +5,6 @@ export default function NavBar() {
     {[
       ['Home', '/'],
       ['Posts', '/posts'],
-      ['Gallery', '/gallery'],
-      ['About', '/about'],
     ].map(([title, url]) => (
       <a
         href={url}

@@ -11,7 +11,6 @@ type PostCardProps = {
 export function PostCard({ title, url, summary, date }: PostCardProps) {
   return <div
     className="grid grid-cols-1 md:grid-cols-3 pb-4"
-    key={url}
   >
     <a
       href={url}
@@ -35,6 +34,7 @@ type PostCardsProps = {
 export function PostCards({ posts }: PostCardsProps) {
   const postcards = posts.map(post =>
     <PostCard
+      key={post.url}
       title={post.title} url={post.url} summary={post.summary} date={post.date}
     />
   );
