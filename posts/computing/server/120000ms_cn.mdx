@@ -1,0 +1,89 @@
+---
+date: "2023-06-01"
+title: "120000 毫秒 Linux 性能分析"
+summary: "一些性能问题排查用到的小工具"
+---
+
+启发与感谢：[Linux Performance Analysis in 60,000 Milliseconds](https://netflixtechblog.com/linux-performance-analysis-in-60-000-milliseconds-accc10403c55)
+
+上边链接是系统性能工程师大神Brendan Gregg写的文章，描述在遇到Linux性能问题前60秒会怎么排查。
+我先简单总结他所描述的工具，在附加一些自己的经验。
+
+## 60000 毫秒内干什么
+1. `uptime`
+    - 主要看不同时间的 load average，看看系统是否越来越忙。
+    - load 指的是1，5，15分钟平均有多少任务在等待CPU。
+3. `dmesg | tail`
+    - 看最后10条系统日志。
+5. `vmstat 1` Virtual Memory Statistics
+    - 比较重要的信息是`si` `so`, swap ins and swap outs. 如果这是不是0，说明系统开始使用swap。swap比RAM慢很多，系统很可能看上去像死机了。
+    - 看内存信息用`free -h`比较 user friendly。
+    - 其他关于CPU的函数：`us` (user time), `sy` (system/kernel time), `id` (idle time), `wa` (wait IO time), `st` (stolen time 比较少见)
+    - 命令中`1`指的是更新延迟。
+7. `mpstat -P ALL 1` MultiProcessor Statistics
+    - `-P ALL` 是指所有的CPU，也可以`-P 1`
+    - `1`是更新延迟
+    - 跟vmstat差不多，只不过没有memory数据。
+9. `pidstat 1` PID Statistics
+    - `1`是更新延迟，有点像`top`。
+    - 比较方便，可以吧output存到文件里或者grep
+12. `iostat -xz 1`
+    - `-x` 显示所有数据
+    - `-z` 不显示没有活动的设备
+    - `r/s w/s rkB/s wkB/s`：reads per second, writes per second, read kb per second, written kb per second.
+    - `await` 平均等待IO的时间（毫秒）。
+    - `avgqu-sz` average queue size 向设备发出的平均请求数。
+    - `%util` 每秒设备花费在工作的百分比。
+14. `free`
+    - 可以增加`-h`改成human readable format
+    - 检查有剩余（free）的内存
+    - `buffers`和`cached`会被IO使用，如果这个数目接近0，IO会有性能问题。
+16. `sar -n DEV 1` System Activity Report
+    - `-n DEV` 显示网络设备的数据
+    - `1` 是更新延迟
+    - 可以看网卡是否饱和。
+    - `%ifutil` interface utilization 不一定准确，可能显示0.0
+    - rxkB/s receive kB/s
+    - txkB/s transmit kB/s
+18. `sar -n TCP,ETCP 1`
+    - TCP 数据
+    - `active/s` locally-initiated connections per second,
+    - `passive/s`remotely-initiated connections per second, i.e. accepted connections,
+    - `retrans/s`retransmitted connections per second.
+20. `top`
+    - 大家都知道这个是什么
+
+## 问题诊断
+
+当机器遇到性能问题，用以上工具怎么做出诊断呢？
+一般问题能分类成一下三种
+1. CPU
+2. IO
+3. Network
+
+### CPU
+
+可以从系统load看出。这样一看`top`就能知道是哪个服务在吃CPU，并可以选择kill掉。
+
+如果从`vmstat`或`mpstast`看出system time很高，可以怀疑CPU问题有可能是IO造成的。
+
+一般CPU慢只会造成系统慢下来，不会完全卡住。如果一个系统完全卡住了，一般我会怀疑是内存不够，系统在swap或者[thrashing](https://en.wikipedia.org/wiki/Thrashing_(computer_science))。在这种情况下可能ssh或者top都慢的不得了，建议直接拔电源 😼。
+
+### IO
+
+可以检查`iostat`. 如果`%util`靠近100%，那么就是IO设备忙不过来了。这里像大家推荐一个`iotop`工具（可能需要安装，而且需要sudo运行），这个工具就是IO世界的`top`，可以帮忙查看是什么任务在利用多少IO。
+
+![image.png](https://p0-bytetech-private.bytetech.info/tos-cn-i-93o7bpds8j/3e51fc760e7f4cb69e5517cd3b0f4cea~tplv-93o7bpds8j-compressed.awebp?policy=eyJ2bSI6MiwiY2siOiJieXRldGVjaCJ9&x-orig-authkey=f32326d3454f2ac7e96d3d06cdbb035152127018&x-orig-expires=1688790339&x-orig-sign=g0iSoX4DGozbkB40OXOjo2jncMY%3D)
+
+这是我自己电脑上运行的，可见大部分IO是transmission造成的，但450K/s不是问题。
+
+### Network
+
+可能服务器完全正常，只是网络挂掉了。
+如果在这种情况下你还能`ssh`到机器内，可以看`sar -n DEV`的输出。主要看`rx`和`tx`是不是过高。如果你知道网卡是1G的，而其中一个数目已经接近1G，那显示网卡可能饱和了，造成性能问题。如果看`sar -n TCP`，有大量的retrans，说明网络不稳定，有链接问题。链接问题也有可能是对方服务超载不能及时回复，不一定是网络出错。
+
+这里也介绍一个`iftop`（也需要安装，也需要sudo），显示network activity by host，可以看出什么链接利用networking比较多。
+
+![image.png](https://p0-bytetech-private.bytetech.info/tos-cn-i-93o7bpds8j/53c4464d6cd24878bfdb9d5639fc6f54~tplv-93o7bpds8j-compressed.awebp?policy=eyJ2bSI6MiwiY2siOiJieXRldGVjaCJ9&x-orig-authkey=f32326d3454f2ac7e96d3d06cdbb035152127018&x-orig-expires=1688790339&x-orig-sign=KaNC3BMvdkieTbby5GYDLRai7hM%3D)
+
+也有一个`ifstat`(需要安装，不需要sudo）工具，跟iostat和vmstat功能一样。

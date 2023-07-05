@@ -2,7 +2,7 @@ with import <nixpkgs> { };
 
 pkgs.mkShell {
   nativeBuildInputs = [
-    nodejs-19_x
+    nodejs
     # nodePackages.firebase-tools
     nodePackages.vercel
     yarn

@@ -1,0 +1,163 @@
+---
+date: "2023-06-05"
+title: "什么是NixOS"
+summary: "以nginx配置为例子展示Nix "
+---
+
+[Nixos](https://nixos.org/) 是一个用Nix包管理器构造的操作系统。他的网站上写了它三个要解决的问题：
+- 可重现。因为Nix是一个纯函数式编程语言，每个包的形成都没有副作用，所以不会出现 "but it works on my machine" 的问题。
+- 声明式。在Nix下，整个系统的设置都可以是一个文件。这是 infra as code 的顶级。跟ansible，docker-compose之类的区别在于Nix是个编程语言，不仅仅是个笨蛋的yaml文件。
+- 可靠。Nix因为没有副作用，系统出现问题可以随意回滚。甚至整个操作系统在grub的时候就能选择回滚，而且保证是原来的配置。
+
+## 问题简介
+
+关于Nix，网上应该能找到很多讲解它如何实现的。
+今天我们不讲那些有完没完的，就简单展示一下。
+有一个很简单的问题，就是我的服务器上有100个小容器，然后要做一个reverse proxy。有几个人提供不同的办法：
+1. 我比较笨但是我很努力，我直接手动写100个配置，以后如果要更改的话再来找我就行了，我时间有的是
+2. 我稍微聪明一点，我写个脚本直接吐出一个nginx.conf来，以后有问题就改脚本
+3. 我的系统有Nix管着我的nginx，我是个程序员，我要用code解决这个问题！
+
+## 用Nix怎么解决
+(如果安装了Nix，可以试图用`nix repl`跟随例子）
+
+来看看用Nix怎么办。我们先试试配饰一个proxy地址。
+```
+{ config, portMap, ... }:
+{
+  services.nginx= {
+    enable = true;
+    virtualHosts = {
+      "host1.example.com" = {
+        locations."/".proxyPass = "http://localhost:8001";
+      };
+    };
+  };
+}
+```
+这里我把 host1.example.com 的 virtualhost 给 proxy 向 localhost:8001。这个跟一般的 nginx.conf 很像。
+
+这有什么用！还是得写100次！
+但是你忘记了，Nix不是yaml，它是个完整的编程语言！我们有 map 啊！(函数式语言一般不用for loop）
+
+我们要写一个函数，input 是这样的
+```
+[
+  # list of list of [ host name, port ].
+  [ "host1" 8001 ]
+  [ "hello" 8004 ]
+  [ "admin" 9403 ]
+  ...
+]
+```
+然后 ouput 应该是
+```
+{
+  "host1.example.com" = {
+    locations."/".proxyPass = "http://localhost:8001";
+  };
+  "hello.example.com" = {
+    locations."/".proxyPass = "http://localhost:8004";
+  };
+  "admin.example.com" = {
+    locations."/".proxyPass = "http://localhost:9403";
+  };
+  ...
+}
+```
+然后最后我们最后就可以写
+
+```
+{ config, portMap, ... }:
+let containerList = [
+  # list of list of [ host name, port ].
+  [ "host1" 8001 ]
+  [ "hello" 8004 ]
+  [ "admin" 9403 ]
+  ...
+]
+{
+  services.nginx =
+  let magicfunction = ...;
+  {
+    enable = true;
+    virtualHosts = magicfunction containerList;
+  };
+}
+```
+
+来开始写写magicfunction。我们第一要把list换成这attr（在{}内的东西）。看看[Docs](https://nixos.org/manual/nix/stable/language/builtins.html)，发现有个listToAttrs的东西。这样
+```
+builtins.listToAttrs [ 
+  { 
+    name = "host1";
+    value = {
+      locations."/".proxyPass = "http://localhost:8001";
+    };
+  } 
+]
+```
+会产生
+```
+{
+  host1 = {
+    locations."/".proxyPass = "http://localhost:8001";
+  }
+}
+```
+已经解决一半了！我们只需要把原本的list改成listToAttrs的格式就行了！这个我们直接map一下就解决了:
+```
+map (x: {
+  name = let
+    host = toString (builtins.elemAt x 1);
+  in
+  "${host}.example.com";
+  value = let
+    port = toString (builtins.elemAt x 1);
+  in
+  {
+    locations."/".proxyPass = "http://localhost:${port}";
+  };
+}) containerList
+```
+这里要注意，括号()内的是一个lambda函数，给予它x，它会输出一个{} attr。这里{}括号不是语言格式，而是定义一个attr。我们然后用这个函数 map 到 containerList，结果会是
+```
+[
+{ name = "8001.example.com"; value = { locations = { "/" = { proxyPass = "http://localhost:8001"; }; }; }; }
+{ name = "8004.example.com"; value = { locations = { "/" = { proxyPass = "http://localhost:8004"; }; }; }; }
+{ name = "9403.example.com"; value = { locations = { "/" = { proxyPass = "http://localhost:9403"; }; }; }; }
+]
+```
+
+## 解决方式
+Putting it all together,
+```
+{ config, portMap, ... }:
+let containerList = [
+  # list of list of [ host name, port ].
+  [ "host1" 8001 ]
+  [ "hello" 8004 ]
+  [ "admin" 9403 ]
+  ...
+]
+{
+  services.nginx =
+  let magicfunction = map (x: {
+      name = let
+        host = toString (builtins.elemAt x 1);
+      in
+      "${host}.example.com";
+      value = let
+        port = toString (builtins.elemAt x 1);
+      in
+      {
+        locations."/".proxyPass = "http://localhost:${port}";
+      };
+    })
+  {
+    enable = true;
+    virtualHosts = builtins.listToAttr (magicfunction containerList);
+  };
+}
+```
+
